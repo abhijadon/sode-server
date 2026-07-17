@@ -1,0 +1,43 @@
+{
+  "name": "sode-server",
+  "version": "1.0.0",
+  "description": "Backend server for SODE Counseling Services LLP",
+  "main": "src/server.js",
+  "type": "commonjs",
+  "private": true,
+  "scripts": {
+    "dev": "nodemon",
+    "start": "bun src/server.js",
+    "test": "echo \"No tests configured\""
+  },
+  "keywords": [
+    "sode",
+    "crm",
+    "fastify",
+    "mongodb",
+    "redis",
+    "bullmq",
+    "kafka"
+  ],
+  "author": "SODE Counseling Services LLP",
+  "license": "ISC",
+  "_moduleAliases": {
+    "@": "./src"
+  },
+  "dependencies": {
+    "@fastify/cors": "^11.3.0",
+    "@fastify/jwt": "^10.2.0",
+    "bcrypt": "^6.0.0",
+    "bullmq": "^5.80.5",
+    "dotenv": "^17.4.2",
+    "fastify": "^5.10.0",
+    "glob": "^13.0.6",
+    "kafkajs": "^2.2.4",
+    "module-alias": "^2.3.4",
+    "mongoose": "^9.7.4",
+    "redis": "^6.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.14"
+  }
+}
