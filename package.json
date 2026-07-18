@@ -25,17 +25,22 @@
     "@": "./src"
   },
   "dependencies": {
+    "@fastify/cookie": "^11.1.2",
     "@fastify/cors": "^11.3.0",
     "@fastify/jwt": "^10.2.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.80.5",
+    "crypto": "^1.0.1",
     "dotenv": "^17.4.2",
     "fastify": "^5.10.0",
     "glob": "^13.0.6",
+    "jsonwebtoken": "^9.0.3",
     "kafkajs": "^2.2.4",
     "module-alias": "^2.3.4",
     "mongoose": "^9.7.4",
-    "redis": "^6.1.0"
+    "redis": "^6.1.0",
+    "useragent": "^2.3.0",
+    "uuid": "^14.0.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"

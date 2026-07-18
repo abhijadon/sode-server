@@ -1,6 +1,9 @@
-const mongoose = require("mongoose");
+"use strict";
 
-const userSchema = new mongoose.Schema(
+const mongoose = require("mongoose");
+const { Schema } = mongoose;
+
+const userSchema = new Schema(
   {
     removed: {
       type: Boolean,
@@ -10,32 +13,77 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    name: {
+    fullname: {
       type: String,
-      default: null,
+      required: [true, "Full name is required"],
       trim: true,
     },
-    phone: {
+    username: {
       type: String,
-      default: null,
+      required: [true, "Username is required"],
+      unique: true,
       trim: true,
+      lowercase: true,
     },
     email: {
       type: String,
-      default: null,
+      required: [true, "Email is required"],
+      unique: true,
+      trim: true,
+      lowercase: true,
+    },
+    password: {
+      type: String,
+      required: [true, "Password is required"],
+    },
+    phone: {
+      type: String,
+      required: [true, "Phone number is required"],
+      unique: true,
       trim: true,
     },
-    role: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Role",
+    isAdmin: {
+      type: Boolean,
+      default: false,
     },
-    workspace: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Workspace",
+    isSubadmin: {
+      type: Boolean,
+      default: false,
+    },
+    isOwner: {
+      type: Boolean,
+      default: false,
+    },
+    role: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+      required: [true, "Role assignment is required"],
+    },
+    workspace: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Workspace",
+      },
+    ],
+    reportsTo: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
+    photo: {
+      type: String,
+      default: null,
     },
   },
-  { timestamps: true },
+  {
+    timestamps: true,
+    versionKey: false,
+  },
 );
+
+// फ़ास्ट सर्च के लिए इंडेक्सिंग
+userSchema.index({ email: 1, phone: 1, username: 1 });
+userSchema.index({ workspace: 1 });
 
 const User = mongoose.model("User", userSchema);
 module.exports = { User };

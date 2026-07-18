@@ -1,3 +1,4 @@
 const { getWebsiteHeaders } = require("./header.controller");
+const { getSidebar } = require("./sidebar.controller");
 
-module.exports = { getWebsiteHeaders };
+module.exports = { getWebsiteHeaders, getSidebar };

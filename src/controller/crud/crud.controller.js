@@ -11,7 +11,7 @@ function create(Model) {
       }
 
       const modelName = Model.modelName;
-      const skipDuplicateCheckModels = ["Header"];
+      const skipDuplicateCheckModels = ["Header", "Sidebar"];
       const shouldSkipNameCheck = skipDuplicateCheckModels.includes(modelName);
 
       /* =======================================
