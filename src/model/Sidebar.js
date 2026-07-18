@@ -65,7 +65,7 @@ const sidebarSchema = new mongoose.Schema(
 
     parentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Navigation",
+      ref: "Sidebar",
       default: null,
     },
 
