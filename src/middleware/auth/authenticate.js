@@ -1,7 +1,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
-const { User } = require("../../model/user");
+const { User } = require("../../model/User");
 
 // ✅ get token from header/cookie
 function getToken(request) {

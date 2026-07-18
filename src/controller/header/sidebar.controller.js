@@ -1,7 +1,7 @@
 "use strict";
 
 const mongoose = require("mongoose");
-const { Sidebar } = require("../../model/sidebar");
+const { Sidebar } = require("../../model/Sidebar");
 const getSidebar = async (request, reply) => {
   try {
     // 🔥 1. FETCH FLAT DATA WITH REQUIRED FIELDS

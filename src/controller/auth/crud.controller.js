@@ -1,8 +1,8 @@
 "use strict";
 
-const { User } = require("../../model/user");
-const { Role } = require("../../model/role");
-const { Workspace } = require("../../model/workspace");
+const { User } = require("../../model/User");
+const { Role } = require("../../model/Role");
+const { Workspace } = require("../../model/Workspace");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 

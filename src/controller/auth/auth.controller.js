@@ -1,6 +1,6 @@
 "use strict";
 
-const { User } = require("../../model/user");
+const { User } = require("../../model/User");
 const mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const useragent = require("useragent");
