@@ -2,10 +2,11 @@
 
 const { basename, extname, join } = require("path");
 const { globSync } = require("glob");
-const mongoose = require("mongoose");
 const CrudController = require("../controller/crud");
 const AuthController = require("../controller/auth");
 const HeaderController = require("../controller/header");
+const CourseController = require("../controller/course/course.controller");
+const UniversityController = require("../controller/university/university.controller");
 const { authenticate } = require("../middleware/auth/authenticate");
 const appModelsFiles = globSync("./src/model/**/*.js");
 
@@ -126,6 +127,42 @@ module.exports = async function (app, options) {
       });
     }
 
+    // ✅ SPECIAL WEBSITE ROUTE FOR COURSES
+    if (entity === "course") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/courses/website-list`,
+          handler: CourseController.getWebsiteCourses,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: CourseController.getWebsiteCourses,
+          preValidation: null,
+        }
+      );
+    }
+
+    // ✅ SPECIAL WEBSITE ROUTE FOR UNIVERSITIES
+    if (entity === "university") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/universities/website-list`,
+          handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+        }
+      );
+    }
+
     if (entity === "user") {
       routes.push(
         {
@@ -171,7 +208,6 @@ module.exports = async function (app, options) {
       if (routeOpts.preValidation) {
         routeConfig.preValidation = routeOpts.preValidation;
       }
-
       app.route(routeConfig);
     }
   }
