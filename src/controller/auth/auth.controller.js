@@ -156,10 +156,11 @@ const login = async (request, reply) => {
     });
 
     // कुकी में टोकन सेट करें
+    const isProduction = process.env.NODE_ENV === "production";
     reply.setCookie("token", accessToken, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
       path: "/",
       maxAge: 60 * 60 * 2,
     });
@@ -200,11 +201,12 @@ const login = async (request, reply) => {
 const logout = async (request, reply) => {
   try {
     // कुकी क्लियर करें
+    const isProduction = process.env.NODE_ENV === "production";
     reply.clearCookie("token", {
       path: "/",
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Lax",
+      secure: isProduction,
+      sameSite: isProduction ? "None" : "Lax",
     });
 
     const userId = request.user?._id || request.user?.id || null;
