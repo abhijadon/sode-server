@@ -79,6 +79,26 @@ const courseSchema = new Schema(
       default: null,
       trim: true,
     },
+    metaTitle: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    metaDescription: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    metaKeywords: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    ogImage: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     fee: {
       type: Number,
       default: 0,

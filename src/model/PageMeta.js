@@ -3,7 +3,7 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const universitySchema = new Schema(
+const pageMetaSchema = new Schema(
   {
     removed: {
       type: Boolean,
@@ -19,58 +19,45 @@ const universitySchema = new Schema(
       default: true,
       index: true,
     },
-    name: {
+    pageName: {
       type: String,
-      required: [true, "University name is required"],
+      required: [true, "Page name is required"],
       trim: true,
-      index: true,
     },
-    slug: {
+    pagePath: {
       type: String,
-      required: [true, "University slug is required"],
+      required: [true, "Page path or route URL is required"],
       unique: true,
       lowercase: true,
       trim: true,
       index: true,
     },
-    logoSrc: {
+    title: {
       type: String,
-      required: [true, "Logo path is required"],
+      required: [true, "Meta Title tag is required"],
       trim: true,
     },
-    imageSrc: {
+    description: {
       type: String,
-      required: [true, "Campus image path is required"],
+      required: [true, "Meta Description tag is required"],
       trim: true,
     },
-    courses: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    brochureUrl: {
+    keywords: {
       type: String,
       default: null,
       trim: true,
     },
-    paragraphs: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    metaTitle: {
+    canonicalUrl: {
       type: String,
       default: null,
       trim: true,
     },
-    metaDescription: {
+    ogTitle: {
       type: String,
       default: null,
       trim: true,
     },
-    metaKeywords: {
+    ogDescription: {
       type: String,
       default: null,
       trim: true,
@@ -80,13 +67,10 @@ const universitySchema = new Schema(
       default: null,
       trim: true,
     },
-    order: {
-      type: Number,
-      default: 0,
-    },
-    featured: {
-      type: Boolean,
-      default: false,
+    twitterCard: {
+      type: String,
+      default: "summary_large_image",
+      trim: true,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -100,10 +84,9 @@ const universitySchema = new Schema(
   }
 );
 
-// High performance indexes
-universitySchema.index({ slug: 1, removed: 1 });
-universitySchema.index({ removed: 1, enabled: 1 });
+// Indexes for fast searching and route lookup
+pageMetaSchema.index({ pagePath: 1, removed: 1, enabled: 1 });
 
-const University = mongoose.model("University", universitySchema);
+const PageMeta = mongoose.model("PageMeta", pageMetaSchema);
 
-module.exports = { University };
+module.exports = { PageMeta };

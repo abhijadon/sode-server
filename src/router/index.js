@@ -7,6 +7,8 @@ const AuthController = require("../controller/auth");
 const HeaderController = require("../controller/header");
 const CourseController = require("../controller/course/course.controller");
 const UniversityController = require("../controller/university/university.controller");
+const PageMetaController = require("../controller/pagemeta/pagemeta.controller");
+const SiteSettingController = require("../controller/sitesetting/sitesetting.controller");
 const { authenticate } = require("../middleware/auth/authenticate");
 const appModelsFiles = globSync("./src/model/**/*.js");
 
@@ -163,6 +165,26 @@ module.exports = async function (app, options) {
       );
     }
 
+    // ✅ SPECIAL WEBSITE ROUTE FOR PAGE META
+    if (entity === "pagemeta") {
+      routes.push({
+        method: "GET",
+        url: `/${entity}/website-read`,
+        handler: PageMetaController.getWebsitePageMeta,
+        preValidation: null,
+      });
+    }
+
+    // ✅ SPECIAL WEBSITE ROUTE FOR SITE SETTINGS
+    if (entity === "sitesetting") {
+      routes.push({
+        method: "GET",
+        url: `/${entity}/website-read`,
+        handler: SiteSettingController.getWebsiteSiteSetting,
+        preValidation: null,
+      });
+    }
+
     if (entity === "user") {
       routes.push(
         {
@@ -181,6 +203,8 @@ module.exports = async function (app, options) {
 
       routes.forEach((route) => {
         if (
+          !route.url.includes("website-list") &&
+          !route.url.includes("website-read") &&
           route.url !== `/${entity}/login` &&
           route.url !== `/${entity}/create`
         ) {
@@ -211,4 +235,27 @@ module.exports = async function (app, options) {
       app.route(routeConfig);
     }
   }
+
+  // ✅ EXPLICIT PUBLIC WEBSITE ROUTES
+  console.log("Registering explicit website routes...");
+  app.route({
+    method: "GET",
+    url: "/sitesetting/website-read",
+    handler: SiteSettingController.getWebsiteSiteSetting,
+  });
+  app.route({
+    method: "GET",
+    url: "/pagemeta/website-read",
+    handler: PageMetaController.getWebsitePageMeta,
+  });
+  app.route({
+    method: "GET",
+    url: "/courses/website-list",
+    handler: CourseController.getWebsiteCourses,
+  });
+  app.route({
+    method: "GET",
+    url: "/universities/website-list",
+    handler: UniversityController.getWebsiteUniversities,
+  });
 };
