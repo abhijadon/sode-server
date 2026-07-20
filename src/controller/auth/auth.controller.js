@@ -155,12 +155,16 @@ const login = async (request, reply) => {
       status: "Success",
     });
 
-    // कुकी में टोकन सेट करें
-    const isProduction = process.env.NODE_ENV === "production";
+    // कुकी में टोकन सेट करें (HTTPS/Production detect)
+    const isHttps =
+      process.env.NODE_ENV === "production" ||
+      request.headers["x-forwarded-proto"] === "https" ||
+      request.protocol === "https";
+
     reply.setCookie("token", accessToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      secure: isHttps,
+      sameSite: isHttps ? "None" : "Lax",
       path: "/",
       maxAge: 60 * 60 * 2,
     });
@@ -201,12 +205,16 @@ const login = async (request, reply) => {
 const logout = async (request, reply) => {
   try {
     // कुकी क्लियर करें
-    const isProduction = process.env.NODE_ENV === "production";
+    const isHttps =
+      process.env.NODE_ENV === "production" ||
+      request.headers["x-forwarded-proto"] === "https" ||
+      request.protocol === "https";
+
     reply.clearCookie("token", {
       path: "/",
       httpOnly: true,
-      secure: isProduction,
-      sameSite: isProduction ? "None" : "Lax",
+      secure: isHttps,
+      sameSite: isHttps ? "None" : "Lax",
     });
 
     const userId = request.user?._id || request.user?.id || null;
