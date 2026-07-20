@@ -1,13 +1,109 @@
 "use strict";
 
+const mongoose = require("mongoose");
 const filterableFields = require("./filterable-fields");
 const searchableFields = require("./searchable-fields");
+
+// Helper function to build schema-safe queries dynamically based on Model schema paths
+function buildSchemaPermissionQuery(Model, req) {
+  const queryConditions = {};
+
+  // 1. Auto-filter removed: false if schema contains 'removed' field
+  if (Model.schema && Model.schema.path("removed")) {
+    queryConditions.removed = false;
+  }
+
+  // 2. Filter enabled: true for selectOptions / dropdown queries if 'enabled' exists
+  const rawUrl = String(req.raw?.url || req.url || "").toLowerCase();
+  if (rawUrl.includes("/options") && Model.schema && Model.schema.path("enabled")) {
+    queryConditions.enabled = true;
+  }
+
+  if (req.userPermissionContext) {
+    const { visibleUserIds, tenantId, workspaceIds, isAdminOrOwner } =
+      req.userPermissionContext;
+
+    if (!isAdminOrOwner) {
+      // 1. Tenant Isolation Check
+      if (tenantId) {
+        if (Model.modelName === "Tenant") {
+          queryConditions._id = new mongoose.Types.ObjectId(tenantId);
+        } else if (Model.schema && Model.schema.path("tenantId")) {
+          queryConditions.tenantId = new mongoose.Types.ObjectId(tenantId);
+        }
+      }
+
+      // 2. Workspace Isolation Check
+      if (workspaceIds && workspaceIds.length > 0) {
+        const validWsObjIds = workspaceIds
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        if (validWsObjIds.length > 0) {
+          if (Model.modelName === "Workspace") {
+            queryConditions._id = { $in: validWsObjIds };
+          } else if (Model.schema && Model.schema.path("workspace")) {
+            queryConditions.workspace = { $in: validWsObjIds };
+          }
+        }
+      }
+
+      // 3. User / Lead / Org Chart Hierarchy Check
+      const isUserOrLeadEntity =
+        Model.modelName === "User" ||
+        Model.modelName === "Lead" ||
+        Model.modelName === "Application" ||
+        Model.modelName === "Student";
+
+      if (isUserOrLeadEntity && visibleUserIds && visibleUserIds.length > 0) {
+        const orConditions = [];
+        if (Model.schema.path("userId")) {
+          orConditions.push({ userId: { $in: visibleUserIds } });
+        }
+        if (Model.schema.path("counsellors")) {
+          orConditions.push({ counsellors: { $in: visibleUserIds } });
+        }
+        if (Model.schema.path("reportsTo")) {
+          orConditions.push({ reportsTo: { $in: visibleUserIds } });
+        }
+        if (Model.modelName === "User") {
+          orConditions.push({ _id: { $in: visibleUserIds } });
+        }
+
+        if (orConditions.length > 0) {
+          queryConditions.$and = queryConditions.$and || [];
+          queryConditions.$and.push({ $or: orConditions });
+        }
+      }
+    }
+  }
+
+  return queryConditions;
+}
 
 function create(Model) {
   return async (request, reply) => {
     try {
-      if (request.user && request.user._id) {
-        request.body.userId = request.user._id;
+      if (request.user) {
+        if (Model.schema && Model.schema.path("userId") && !request.body.userId) {
+          request.body.userId = request.user._id;
+        }
+        if (
+          Model.schema &&
+          Model.schema.path("tenantId") &&
+          !request.body.tenantId &&
+          request.user.tenantId
+        ) {
+          request.body.tenantId = request.user.tenantId;
+        }
+        if (
+          Model.schema &&
+          Model.schema.path("workspace") &&
+          !request.body.workspace &&
+          request.user.workspace
+        ) {
+          request.body.workspace = request.user.workspace;
+        }
       }
 
       const modelName = Model.modelName;
@@ -17,7 +113,7 @@ function create(Model) {
       /* =======================================
          ✅ NAME VALIDATION (नाम की जांच)
          ======================================= */
-      if (!shouldSkipNameCheck) {
+      if (!shouldSkipNameCheck && Model.schema && Model.schema.path("name")) {
         if (!request.body.name) {
           return reply.code(400).send({
             success: false,
@@ -27,8 +123,12 @@ function create(Model) {
         }
 
         const { name } = request.body;
-        // Fastify/MongoDB Performance: .exists() केवल boolean चेक करता है जो कि सबसे तेज़ है
-        const existingDocument = await Model.exists({ name });
+        const existsQuery = { name };
+        if (Model.schema.path("removed")) {
+          existsQuery.removed = false;
+        }
+
+        const existingDocument = await Model.exists(existsQuery);
         if (existingDocument) {
           return reply.code(400).send({
             success: false,
@@ -38,7 +138,6 @@ function create(Model) {
         }
       }
 
-      // डेटाबेस में नया डॉक्यूमेंट सेव करना
       const document = new Model(request.body);
       const savedDocument = await document.save();
 
@@ -63,15 +162,30 @@ function update(Model) {
   return async (request, reply) => {
     try {
       const { id } = request.params;
-      const updateData = request.body;
+      const updateData = { ...request.body };
 
-      // डेटाबेस में डॉक्यूमेंट को अपडेट करना
-      const document = await Model.findByIdAndUpdate(id, updateData, {
-        new: true, // अपडेट होने के बाद नया डेटा रिटर्न करेगा
-        runValidators: true, // स्कीमा में लगे वैलिडेशन्स को रन करेगा
+      delete updateData._id;
+      delete updateData.__v;
+      delete updateData.createdAt;
+      delete updateData.updatedAt;
+
+      // Sanitize nested populated objects (e.g. roles: [{_id}], parentId: {_id})
+      Object.keys(updateData).forEach((key) => {
+        const val = updateData[key];
+        if (Array.isArray(val)) {
+          updateData[key] = val.map((item) =>
+            item && typeof item === "object" && item._id ? item._id : item
+          );
+        } else if (val && typeof val === "object" && val._id) {
+          updateData[key] = val._id;
+        }
       });
 
-      // यदि डॉक्यूमेंट नहीं मिलता है
+      const document = await Model.findByIdAndUpdate(id, updateData, {
+        new: true,
+        runValidators: true,
+      });
+
       if (!document) {
         return reply.code(404).send({
           success: false,
@@ -98,15 +212,11 @@ function update(Model) {
   };
 }
 
-/**
- * 3. जेनेरिक रिमूव/डिलीट कंट्रोलर
- */
 function remove(Model, relatedModels = []) {
   return async (request, reply) => {
     try {
       const { id } = request.params;
 
-      // ✅ चेक करें कि डॉक्यूमेंट मौजूद है या नहीं
       const document = await Model.findById(id);
       if (!document) {
         return reply.code(404).send({
@@ -118,7 +228,6 @@ function remove(Model, relatedModels = []) {
 
       const deletedLogs = [];
 
-      // ✅ निर्भर (Related) मॉडल्स को पहले क्लीनअप करना (Cascading Delete)
       if (relatedModels.length > 0) {
         for (const { model: RelatedModel, foreignKey } of relatedModels) {
           const relatedDocs = await RelatedModel.find({ [foreignKey]: id })
@@ -131,13 +240,11 @@ function remove(Model, relatedModels = []) {
               count: relatedDocs.length,
             });
 
-            // संबंधित सभी डाक्यूमेंट्स को एक साथ डिलीट करना
             await RelatedModel.deleteMany({ [foreignKey]: id });
           }
         }
       }
 
-      // ✅ मुख्य डॉक्यूमेंट को डिलीट करना
       await Model.deleteOne({ _id: id });
 
       return reply.code(200).send({
@@ -164,19 +271,16 @@ function read(Model, populateFields = []) {
     try {
       const { id } = request.params;
 
-      // सुनिश्चित करें कि populateFields एक Array है
       const fieldsToPopulate = Array.isArray(populateFields)
         ? populateFields
         : [populateFields];
 
       let query = Model.findById(id);
 
-      // यदि रिलेशंस पॉपुलेट करने हैं
       fieldsToPopulate.forEach((field) => {
         if (field) query = query.populate(field);
       });
 
-      // .lean() मोंगूज़ को हल्का और सुपर फ़ास्ट बनाता है
       const document = await query.lean();
 
       if (!document) {
@@ -219,7 +323,6 @@ function pagination(Model, populateFields = []) {
         ...filters
       } = request.query;
 
-      // इनपुट्स सैनिटाइजेशन
       const sanitizedItems = Math.min(Math.max(parseInt(items, 10), 1), 500);
       const sanitizedPage = Math.max(parseInt(page, 10), 1);
       const skip = (sanitizedPage - 1) * sanitizedItems;
@@ -228,7 +331,8 @@ function pagination(Model, populateFields = []) {
       const allowedFilterFields = filterableFields[modelName] || [];
       const allowedSearchFields = searchableFields[modelName] || [];
 
-      const queryConditions = {};
+      // ✅ Build schema-safe base query conditions
+      const queryConditions = buildSchemaPermissionQuery(Model, request);
 
       /* =======================================
          🔍 TEXT SEARCH (टेक्स्ट सर्च)
@@ -253,7 +357,11 @@ function pagination(Model, populateFields = []) {
          🎯 EXACT FILTERS (फ़िल्टर्स)
          ======================================= */
       for (const key in filters) {
-        if (allowedFilterFields.includes(key)) {
+        if (
+          allowedFilterFields.includes(key) &&
+          Model.schema &&
+          Model.schema.path(key)
+        ) {
           queryConditions[key] = filters[key];
         }
       }
@@ -273,7 +381,6 @@ function pagination(Model, populateFields = []) {
         });
       }
 
-      // Parallel execution से टाइम बचता है
       const [documents, totalCount] = await Promise.all([
         query,
         Model.countDocuments(queryConditions),
@@ -311,5 +418,109 @@ function pagination(Model, populateFields = []) {
   };
 }
 
-// सभी मेथड्स को एक साथ एक्सपोर्ट करना
-module.exports = { create, update, remove, read, pagination };
+function selectOptions(
+  Model,
+  customSelect = null,
+  parentField = null,
+  parentFields = "",
+  childField = null
+) {
+  return async (request, reply) => {
+    try {
+      // ✅ Build schema-safe base query conditions
+      const query = buildSchemaPermissionQuery(Model, request);
+
+      if (request.query?.entity) {
+        query.entity = {
+          $in: [request.query.entity],
+        };
+      }
+
+      let fieldsToSelect = customSelect;
+      if (!fieldsToSelect) {
+        const potentialFields = [
+          "name",
+          "fullname",
+          "title",
+          "label",
+          "username",
+          "email",
+          "slug",
+          "enabled",
+        ];
+        const validFields = potentialFields.filter(
+          (f) => Model.schema && Model.schema.path(f)
+        );
+        fieldsToSelect = ["_id", ...validFields].join(" ");
+      } else {
+        const requestedArray = fieldsToSelect.split(" ");
+        const validArray = requestedArray.filter(
+          (f) => f === "_id" || (Model.schema && Model.schema.path(f))
+        );
+        if (validArray.length > 0) {
+          fieldsToSelect = validArray.join(" ");
+        }
+      }
+
+      if (
+        parentField &&
+        !fieldsToSelect.includes(parentField) &&
+        Model.schema &&
+        Model.schema.path(parentField)
+      ) {
+        fieldsToSelect += ` ${parentField}`;
+      }
+
+      let itemsQuery = Model.find(query).select(fieldsToSelect);
+      if (parentField) {
+        itemsQuery = itemsQuery.populate({
+          path: parentField,
+          select: parentFields,
+          strictPopulate: false,
+        });
+      }
+
+      const items = await itemsQuery
+        .sort({
+          fullname: 1,
+          name: 1,
+          title: 1,
+          createdAt: -1,
+        })
+        .lean();
+
+      if (childField && parentField) {
+        const parentIds = items.map((i) => i[parentField]?._id).filter(Boolean);
+
+        const children = await Model.find({
+          [childField]: {
+            $in: parentIds,
+          },
+          ...(Model.schema?.path("removed") ? { removed: false } : {}),
+        }).lean();
+
+        items.forEach((item) => {
+          item.children = children.filter(
+            (child) => String(child[childField]) === String(item._id)
+          );
+        });
+      }
+
+      return reply.code(200).send({
+        success: true,
+        result: items,
+        message: `${Model.modelName} items retrieved successfully`,
+      });
+    } catch (error) {
+      console.error(`❌ Error in selectOptions(${Model.modelName}):`, error);
+      return reply.code(500).send({
+        success: false,
+        result: null,
+        message: `An error occurred while retrieving ${Model.modelName} items`,
+        error: error.message,
+      });
+    }
+  };
+}
+
+module.exports = { create, update, remove, read, pagination, selectOptions };

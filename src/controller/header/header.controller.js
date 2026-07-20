@@ -3,11 +3,17 @@
 const mongoose = require("mongoose");
 const getWebsiteHeaders = async (request, reply) => {
   try {
-    const Header = mongoose.model("Header");
-    const flatHeaders = await Header.find({
+    const queryConditions = {
       removed: false,
       enabled: true,
-    })
+    };
+
+    if (request.queryConditions && typeof request.queryConditions === "object") {
+      Object.assign(queryConditions, request.queryConditions);
+    }
+
+    const Header = mongoose.model("Header");
+    const flatHeaders = await Header.find(queryConditions)
       .select(
         "label href slug icon order parentId showOnDesktop showOnMobile premium text color bgColor textColor openInNewTab",
       )

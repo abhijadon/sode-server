@@ -4,6 +4,7 @@ const {
   read,
   remove,
   update,
+  selectOptions,
 } = require("./crud.controller");
 
 module.exports = {
@@ -12,4 +13,5 @@ module.exports = {
   read,
   remove,
   update,
+  selectOptions,
 };

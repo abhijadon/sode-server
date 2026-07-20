@@ -3,7 +3,7 @@
 const jwt = require("jsonwebtoken");
 const { User } = require("../../model/User");
 
-// ✅ get token from header/cookie
+// ✅ Helper to extract token from Header (Bearer) or Cookie (token)
 function getToken(request) {
   let token = null;
 
@@ -40,7 +40,7 @@ const authenticate = async (request, reply) => {
     try {
       decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || "JWT_BACKUP_SECRET_KEY",
+        process.env.JWT_SECRET || "JWT_BACKUP_SECRET_KEY"
       );
     } catch (err) {
       return reply.code(401).send({
@@ -60,7 +60,7 @@ const authenticate = async (request, reply) => {
       });
     }
 
-    // 3️⃣ डेटाबेस से सिर्फ यूजर चेक करें (कोई सेशन एरे वैलिडेशन नहीं)
+    // 3️⃣ Fetch User from DB with populated Role
     const user = await User.findOne({
       _id: decoded.id,
       removed: false,
@@ -76,19 +76,29 @@ const authenticate = async (request, reply) => {
       });
     }
 
-    // ✅ request.user को सीधे ऑब्जेक्ट फॉर्मेट में सेट करें
+    const roleId = user.role?._id ? String(user.role._id) : user.role ? String(user.role) : null;
+    const roleName = user.role?.name || "Member";
+
+    // ✅ request.user populated cleanly with roleId and roleName
     request.user = {
       _id: String(user._id),
       id: String(user._id),
       username: user.username,
       email: user.email,
-      isAdmin: user.isAdmin,
-      isOwner: user.isOwner,
-      role: user.role?.name || "Member",
-      workspace: user.workspace,
+      fullname: user.fullname,
+      isAdmin: Boolean(user.isAdmin),
+      isOwner: Boolean(user.isOwner),
+      isSubadmin: Boolean(user.isSubadmin),
+      roleId: roleId,
+      roleName: roleName,
+      role: user.role,
+      roles: user.role ? [user.role] : [],
+      workspace: user.workspace || [],
+      tenantId: user.tenantId ? String(user.tenantId) : null,
+      reportsTo: user.reportsTo ? String(user.reportsTo) : null,
     };
 
-    // यूज़र की lastSeen फील्ड को बैकग्राउंड में अपडेट करें
+    // Update lastSeen and online status in background
     try {
       user.lastSeen = new Date();
       user.is_Online = true;
@@ -107,4 +117,4 @@ const authenticate = async (request, reply) => {
   }
 };
 
-module.exports = { authenticate };
+module.exports = { authenticate, getToken };

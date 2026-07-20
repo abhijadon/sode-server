@@ -13,12 +13,31 @@ const app = Fastify({
 app.register(cors, {
   origin: true,
   credentials: true,
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: [
+    "Origin",
+    "X-Requested-With",
+    "Content-Type",
+    "Accept",
+    "Authorization",
+    "Cookie",
+    "Set-Cookie",
+  ],
+  exposedHeaders: ["Set-Cookie"],
 });
 
 // 2. Cookie प्लगइन रजिस्ट्रेशन (राउट्स और मिडलवेयर से पहले होना ज़रूरी है)
 app.register(fastifyCookie, {
   secret: process.env.COOKIE_SECRET || "my-cookie-fallback-secret",
   parseOptions: {},
+});
+
+// 2.5 Multipart File Upload प्लगइन रजिस्ट्रेशन
+app.register(require("@fastify/multipart"), {
+  limits: {
+    fileSize: 100 * 1024 * 1024, // 100 MB max file size
+  },
+  attachFieldsToBody: false,
 });
 
 // 3. डायनेमिक राउट्स रजिस्ट्रेशन

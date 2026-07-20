@@ -1,55 +1,123 @@
 "use strict";
 
-const mongoose = require("mongoose");
 const { Sidebar } = require("../../model/Sidebar");
+
 const getSidebar = async (request, reply) => {
   try {
-    // 🔥 1. FETCH FLAT DATA WITH REQUIRED FIELDS
+    const currentUser = request.user || {};
+    const isAdminOrOwner = Boolean(currentUser.isAdmin || currentUser.isOwner);
+
+    // 1. FETCH FLAT SIDEBAR ITEMS WITH POPULATED ROLES
     const flatSidebar = await Sidebar.find({
       removed: false,
       enabled: true,
     })
+      .populate("roles", "_id name")
       .select(
-        "title section sectionOrder itemOrder icon path parentId target newTab badge roles",
+        "title section sectionOrder itemOrder icon path parentId target newTab badge roles enabled removed"
       )
-      .sort({ sectionOrder: 1, itemOrder: 1 }) // पहले सेक्शन ऑर्डर फिर आइटम ऑर्डर से सॉर्ट करें
+      .sort({ sectionOrder: 1, itemOrder: 1 })
       .lean();
 
-    // ==========================================
-    // 🔥 2. BUILD NESTED TREE (ट्री स्ट्रक्चर बनाना)
-    // ==========================================
+    // 2. EXTRACT CURRENT USER ROLE IDS & ROLE NAMES
+    const userRoleIds = new Set();
+    const userRoleNames = new Set();
+
+    if (currentUser) {
+      if (currentUser.isAdmin) userRoleNames.add("Admin");
+      if (currentUser.isOwner) userRoleNames.add("Owner");
+      if (currentUser.isSubadmin) userRoleNames.add("Subadmin");
+
+      if (currentUser.roleId) userRoleIds.add(String(currentUser.roleId));
+      if (currentUser.roleName) userRoleNames.add(currentUser.roleName);
+
+      if (currentUser.role) {
+        if (typeof currentUser.role === "string") {
+          userRoleIds.add(currentUser.role);
+        } else if (typeof currentUser.role === "object") {
+          if (currentUser.role._id) userRoleIds.add(String(currentUser.role._id));
+          if (currentUser.role.name) userRoleNames.add(currentUser.role.name);
+        }
+      }
+
+      if (Array.isArray(currentUser.roles)) {
+        currentUser.roles.forEach((r) => {
+          if (typeof r === "string") {
+            userRoleIds.add(r);
+          } else if (typeof r === "object") {
+            if (r._id) userRoleIds.add(String(r._id));
+            if (r.name) userRoleNames.add(r.name);
+          }
+        });
+      }
+    }
+
+    // 3. STRICT FILTERING: SHOW ONLY ITEMS EXPLICITLY PERMITTED TO USER'S ROLE
+    const filteredSidebar = flatSidebar.filter((item) => {
+      // Admin / Owner sees full sidebar
+      if (isAdminOrOwner) return true;
+
+      const itemRoles = Array.isArray(item.roles) ? item.roles : [];
+
+      // If sidebar item has no roles assigned at all, hide from non-admins
+      if (itemRoles.length === 0) return false;
+
+      // Extract all role IDs and Names assigned to this sidebar item
+      const itemRoleIds = new Set();
+      const itemRoleNames = new Set();
+
+      itemRoles.forEach((r) => {
+        if (!r) return;
+        if (typeof r === "string") {
+          itemRoleIds.add(r);
+        } else if (typeof r === "object") {
+          if (r._id) itemRoleIds.add(String(r._id));
+          if (r.name) itemRoleNames.add(r.name);
+        }
+      });
+
+      // Check if user has a matching role ID
+      for (const userRoleId of userRoleIds) {
+        if (itemRoleIds.has(userRoleId)) return true;
+      }
+
+      // Check if user has a matching role Name
+      for (const userRoleName of userRoleNames) {
+        if (itemRoleNames.has(userRoleName)) return true;
+      }
+
+      // If user's role is not explicitly listed in item.roles, HIDE
+      return false;
+    });
+
+    // 4. BUILD NESTED TREE STRUCTURE
     const itemMap = Object.create(null);
     const treeRoots = [];
 
-    // स्टेप A: सभी आइटम्स का एक मैप तैयार करें और डिफ़ॉल्ट children ऐरे सेट करें
-    flatSidebar.forEach((item) => {
+    filteredSidebar.forEach((item) => {
       itemMap[item._id.toString()] = {
         ...item,
         children: [],
       };
     });
 
-    // स्टेप B: पैरेंट-चाइल्ड रिलेशनशिप मैप करें
-    flatSidebar.forEach((item) => {
+    filteredSidebar.forEach((item) => {
       const mappedItem = itemMap[item._id.toString()];
 
-      // चेक करें कि क्या इस आइटम का कोई parentId है
       if (item.parentId) {
         const parentIdStr = item.parentId._id
           ? item.parentId._id.toString()
           : item.parentId.toString();
 
-        // यदि पैरेंट मैप में मौजूद है, तो इसे उसके children ऐरे में पुश करें
         if (itemMap[parentIdStr]) {
           itemMap[parentIdStr].children.push(mappedItem);
         }
       } else {
-        // अगर कोई parentId नहीं है, तो यह रूट (Main Sidebar Menu) है
         treeRoots.push(mappedItem);
       }
     });
 
-    // स्टेप C: हर लेवल पर चिल्ड्रेन को 'itemOrder' के हिसाब से दोबारा री-सॉर्ट करना (सुरक्षा के लिए)
+    // Re-sort children at each level by itemOrder
     const sortTree = (nodes) => {
       nodes.sort((a, b) => (a.itemOrder || 0) - (b.itemOrder || 0));
       nodes.forEach((node) => {
@@ -61,9 +129,6 @@ const getSidebar = async (request, reply) => {
 
     sortTree(treeRoots);
 
-    // ==========================================
-    // 🔥 3. RESPONSE DELIVERY (रिस्पॉन्स भेजना)
-    // ==========================================
     return reply.code(200).send({
       success: true,
       result: treeRoots,
