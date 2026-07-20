@@ -3,6 +3,10 @@
 require("dotenv").config();
 const mongoose = require("mongoose");
 const { University } = require("../model/University");
+const { PartnerUniversity } = require("../model/PartnerUniversity");
+
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm";
 
 const universitiesData = [
   {
@@ -167,32 +171,57 @@ const universitiesData = [
   },
 ];
 
-async function seedUniversities() {
+async function seedUniversitiesAndPartners() {
   try {
-    const mongoUri =
-      process.env.MONGODB_URI ||
-      "mongodb://crmadmin:Abhishek2028@172.105.37.57:27017/sode?authSource=admin";
-
     console.log("🍃 Connecting to MongoDB...");
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(MONGODB_URI);
 
-    console.log("🔄 Upserting university data...");
+    console.log("🧹 Dropping partneruniversities indexes & clearing old fields...");
+    try {
+      await mongoose.connection.db.collection("partneruniversities").dropIndexes();
+    } catch (e) {}
+
+    await PartnerUniversity.deleteMany({});
+    console.log("🗑️ Cleaned up partneruniversities collection.");
 
     for (const item of universitiesData) {
-      await University.findOneAndUpdate(
+      // 1️⃣ Upsert in University model (ONLY clean fields: name, slug, logoSrc, imageSrc, order, enabled)
+      const uniDoc = await University.findOneAndUpdate(
         { slug: item.slug },
-        { $set: item },
+        {
+          $set: {
+            name: item.name,
+            slug: item.slug,
+            logoSrc: item.logoSrc,
+            imageSrc: item.imageSrc,
+            order: item.order,
+            enabled: true,
+          },
+        },
         { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
       );
-      console.log(`✅ Upserted university: ${item.name}`);
+
+      // 2️⃣ Create in PartnerUniversity model (strictly linked to University._id)
+      await PartnerUniversity.create({
+        university: uniDoc._id,
+        courses: item.courses,
+        brochureUrl: item.brochureUrl,
+        paragraphs: item.paragraphs,
+        order: item.order,
+        featured: item.featured,
+        enabled: true,
+      });
+
+      console.log(`✅ Synced Clean University & PartnerUniversity: ${item.name} (${uniDoc._id})`);
     }
 
-    console.log("\n🎉 All 10 universities successfully imported into MongoDB!");
-    process.exit(0);
+    console.log("\n🎉 All universities and partner universities successfully cleaned and synced!");
   } catch (error) {
     console.error("❌ Error seeding universities:", error);
-    process.exit(1);
+  } finally {
+    await mongoose.disconnect();
+    console.log("🔌 MongoDB disconnected.");
   }
 }
 
-seedUniversities();
+seedUniversitiesAndPartners();

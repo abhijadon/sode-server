@@ -3,7 +3,7 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const universitySchema = new Schema(
+const eligibilitySchema = new Schema(
   {
     removed: {
       type: Boolean,
@@ -19,35 +19,32 @@ const universitySchema = new Schema(
       default: true,
       index: true,
     },
-    name: {
+    title: {
       type: String,
-      required: [true, "University name is required"],
+      required: [true, "Eligibility title is required"],
       trim: true,
-      index: true,
     },
     slug: {
       type: String,
-      required: [true, "University slug is required"],
+      required: [true, "Eligibility slug is required"],
       unique: true,
       lowercase: true,
       trim: true,
       index: true,
     },
-    logoSrc: {
-      type: Schema.Types.ObjectId,
-      ref: "Media",
+    description: {
+      type: String,
       default: null,
-      index: true,
-    },
-    imageSrc: {
-      type: Schema.Types.ObjectId,
-      ref: "Media",
-      default: null,
-      index: true,
+      trim: true,
     },
     order: {
       type: Number,
       default: 0,
+    },
+    createdBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
     },
   },
   {
@@ -56,9 +53,9 @@ const universitySchema = new Schema(
   }
 );
 
-universitySchema.index({ slug: 1, removed: 1 });
-universitySchema.index({ removed: 1, enabled: 1 });
+eligibilitySchema.index({ removed: 1, enabled: 1 });
+eligibilitySchema.index({ slug: 1, removed: 1 });
 
-const University = mongoose.model("University", universitySchema);
+const Eligibility = mongoose.model("Eligibility", eligibilitySchema);
 
-module.exports = { University };
+module.exports = { Eligibility };

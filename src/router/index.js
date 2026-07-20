@@ -59,6 +59,88 @@ const populateMap = {
       select: "name",
     },
   ],
+  course: [
+    {
+      path: "category",
+      select: "name slug type",
+    },
+    {
+      path: "duration",
+      select: "title slug months",
+    },
+    {
+      path: "eligibility",
+      select: "title slug",
+    },
+    {
+      path: "university",
+      select: "name slug logoSrc imageSrc",
+    },
+    {
+      path: "fee",
+      select: "title amount currency slug",
+    },
+    {
+      path: "image",
+      select: "url alt name",
+    },
+    {
+      path: "logo",
+      select: "url alt name",
+    },
+  ],
+  subcourse: [
+    {
+      path: "course",
+      select: "title category university slug",
+    },
+    {
+      path: "category",
+      select: "name slug type",
+    },
+    {
+      path: "duration",
+      select: "title slug months",
+    },
+    {
+      path: "eligibility",
+      select: "title slug",
+    },
+    {
+      path: "university",
+      select: "name slug logoSrc imageSrc",
+    },
+    {
+      path: "fee",
+      select: "title amount currency slug",
+    },
+    {
+      path: "image",
+      select: "url alt name",
+    },
+  ],
+  category: [
+    {
+      path: "parentId",
+      select: "name slug type",
+    },
+  ],
+  university: [
+    {
+      path: "logoSrc",
+      select: "url alt name",
+    },
+    {
+      path: "imageSrc",
+      select: "url alt name",
+    },
+  ],
+  partneruniversity: [
+    {
+      path: "university",
+      select: "name slug logoSrc imageSrc",
+    },
+  ],
 };
 
 // ✅ ऑप्शंस सेलेक्ट फ़ील्ड्स कॉन्फ़िगरेशन मैप (Router Level Projections)
@@ -69,8 +151,15 @@ const optionsSelectMap = {
   tenant: "_id name slug enabled",
   header: "_id label href slug parentId enabled",
   sidebar: "_id title path section roles parentId enabled",
+  category: "_id name slug type parentId enabled",
+  duration: "_id title slug months enabled order",
+  eligibility: "_id title slug enabled order",
+  fee: "_id title amount currency slug enabled order",
+  media: "_id name url alt fileName enabled",
   course: "_id title slug category university logo enabled",
+  subcourse: "_id title slug course fee duration enabled",
   university: "_id name slug logoSrc enabled",
+  partneruniversity: "_id name slug logoSrc imageSrc brochureUrl courses paragraphs featured enabled order",
   pagemeta: "_id pageName pagePath title enabled",
   sitesetting: "_id siteName siteUrl gtmId enabled",
   media: "_id name alt url mimeType bucket key enabled",
@@ -240,12 +329,27 @@ module.exports = async function (app, options) {
       );
     }
 
-    // ✅ SPECIAL PUBLIC WEBSITE ROUTES FOR UNIVERSITIES
+    // ✅ SPECIAL PUBLIC WEBSITE ROUTES FOR UNIVERSITIES & PARTNER UNIVERSITIES
     if (entity === "university") {
       routes.push(
         {
           method: "GET",
           url: `/universities/website-list`,
+          handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+        }
+      );
+    } else if (entity === "partneruniversity") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/partneruniversities/website-list`,
           handler: UniversityController.getWebsiteUniversities,
           preValidation: null,
         },

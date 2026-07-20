@@ -3,7 +3,7 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const courseSchema = new Schema(
+const subcourseSchema = new Schema(
   {
     removed: {
       type: Boolean,
@@ -19,29 +19,63 @@ const courseSchema = new Schema(
       default: true,
       index: true,
     },
+    course: {
+      type: Schema.Types.ObjectId,
+      ref: "Course",
+      required: [true, "Parent course reference is required"],
+      index: true,
+    },
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",
-      required: [true, "Course category reference is required"],
-      index: true,
-    },
-    title: {
-      type: String,
-      required: [true, "Course title is required"],
-      trim: true,
-    },
-    slug: {
-      type: String,
-      required: [true, "Course slug is required"],
-      unique: true,
-      lowercase: true,
-      trim: true,
+      default: null,
       index: true,
     },
     university: {
       type: Schema.Types.ObjectId,
       ref: "University",
-      required: [true, "University reference is required"],
+      default: null,
+      index: true,
+    },
+    title: {
+      type: String,
+      required: [true, "Subcourse title is required"],
+      trim: true,
+    },
+    slug: {
+      type: String,
+      required: [true, "Subcourse slug is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
+    shortDescription: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    description: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    duration: {
+      type: Schema.Types.ObjectId,
+      ref: "Duration",
+      default: null,
+      index: true,
+    },
+    eligibility: {
+      type: Schema.Types.ObjectId,
+      ref: "Eligibility",
+      default: null,
+      index: true,
+    },
+    fee: {
+      type: Schema.Types.ObjectId,
+      ref: "Fee",
+      default: null,
       index: true,
     },
     image: {
@@ -50,40 +84,17 @@ const courseSchema = new Schema(
       default: null,
       index: true,
     },
-    logo: {
-      type: Schema.Types.ObjectId,
-      ref: "Media",
-      default: null,
-      index: true,
-    },
-    description: {
-      type: String,
-      required: [true, "Course description is required"],
-      trim: true,
-    },
-    duration: {
-      type: Schema.Types.ObjectId,
-      ref: "Duration",
-      required: [true, "Course duration reference is required"],
-      index: true,
-    },
-    eligibility: {
-      type: Schema.Types.ObjectId,
-      ref: "Eligibility",
-      required: [true, "Course eligibility reference is required"],
-      index: true,
-    },
     brochureUrl: {
       type: String,
       default: null,
       trim: true,
     },
-    fee: {
-      type: Schema.Types.ObjectId,
-      ref: "Fee",
-      default: null,
-      index: true,
-    },
+    modules: [
+      {
+        title: { type: String, trim: true },
+        description: { type: String, trim: true },
+      },
+    ],
     featured: {
       type: Boolean,
       default: false,
@@ -105,10 +116,10 @@ const courseSchema = new Schema(
   }
 );
 
-// Indexes for fast searching and filtering
-courseSchema.index({ category: 1, removed: 1, enabled: 1 });
-courseSchema.index({ slug: 1, removed: 1 });
+// High-performance compound indexes
+subcourseSchema.index({ course: 1, removed: 1, enabled: 1 });
+subcourseSchema.index({ slug: 1, removed: 1 });
 
-const Course = mongoose.model("Course", courseSchema);
+const Subcourse = mongoose.model("Subcourse", subcourseSchema);
 
-module.exports = { Course };
+module.exports = { Subcourse };

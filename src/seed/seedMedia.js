@@ -1,148 +1,98 @@
 "use strict";
 
-const fs = require("fs");
-const path = require("path");
-const mongoose = require("mongoose");
 require("dotenv").config();
-
+const mongoose = require("mongoose");
 const { Media } = require("../model/Media");
-const { SiteSetting } = require("../model/SiteSetting");
-const { uploadFileToMinIO } = require("../service/minio/upload.service");
+const { Course } = require("../model/Course");
+const { University } = require("../model/University");
 
-// Base path to client public images
-const PUBLIC_IMAGES_DIR = path.resolve(
-  __dirname,
-  "../../../client/public/assets/images"
-);
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm";
 
-// Target static files to upload into MinIO & Media model
-const targetMediaSeedFiles = [
-  {
-    fileName: "favicon.ico",
-    alt: "SODE Favicon ICO",
-    mimeType: "image/x-icon",
-    key: "site/favicon.ico",
-  },
-  {
-    fileName: "favicon.svg",
-    alt: "SODE Favicon SVG",
-    mimeType: "image/svg+xml",
-    key: "site/favicon.svg",
-  },
-  {
-    fileName: "favicon-96x96.png",
-    alt: "SODE Favicon 96x96 PNG",
-    mimeType: "image/png",
-    key: "site/favicon-96x96.png",
-  },
-  {
-    fileName: "apple-touch-icon.png",
-    alt: "SODE Apple Touch Icon",
-    mimeType: "image/png",
-    key: "site/apple-touch-icon.png",
-  },
-  {
-    fileName: "SODE-LOGO.png",
-    alt: "SODE Official Logo",
-    mimeType: "image/png",
-    key: "site/sode-logo.png",
-  },
-  {
-    fileName: "sode-homepage-og-card-image.png",
-    alt: "SODE Homepage OG Card",
-    mimeType: "image/png",
-    key: "site/og-card-image.png",
-  },
-];
+function getFileName(url) {
+  if (!url) return "file";
+  const parts = url.split("/");
+  return parts[parts.length - 1] || "file";
+}
 
-async function seedMediaAssets() {
+async function findOrCreateMedia(url, defaultName = "Media Asset") {
+  if (!url || typeof url !== "string") return null;
+  const cleanUrl = url.trim();
+  if (!cleanUrl) return null;
+
+  let media = await Media.findOne({ url: cleanUrl });
+  if (!media) {
+    const fileName = getFileName(cleanUrl);
+    const mimeType = fileName.endsWith(".png")
+      ? "image/png"
+      : fileName.endsWith(".webp")
+      ? "image/webp"
+      : "image/jpeg";
+
+    media = await Media.create({
+      name: defaultName || fileName,
+      alt: defaultName || fileName,
+      url: cleanUrl,
+      bucket: "public-assets",
+      key: `assets/${fileName}`,
+      fileName,
+      mimeType,
+      size: 1024,
+      enabled: true,
+    });
+    console.log(`✅ Created Media document: ${media.name} (${media._id}) -> ${cleanUrl}`);
+  }
+  return media._id;
+}
+
+async function seedMediaAndMigrateReferences() {
   try {
-    const mongoUri =
-      process.env.MONGODB_URI || "mongodb://localhost:27017/sode";
-    if (mongoose.connection.readyState === 0) {
-      await mongoose.connect(mongoUri);
-    }
+    console.log("🍃 Connecting to MongoDB...");
+    await mongoose.connect(MONGODB_URI);
 
-    console.log("🚀 Starting MinIO & Mongoose Media Asset Seeding...");
-
-    const uploadedMediaMap = {};
-
-    for (const seedFile of targetMediaSeedFiles) {
-      const filePath = path.join(PUBLIC_IMAGES_DIR, seedFile.fileName);
-      let fileBuffer = null;
-      let finalUrl = `/assets/images/${seedFile.fileName}`;
-      let bucket = "images";
-      let key = seedFile.key;
-
-      if (fs.existsSync(filePath)) {
-        fileBuffer = fs.readFileSync(filePath);
-        console.log(`📦 Attempting MinIO Upload for ${seedFile.fileName}...`);
-
-        try {
-          const uploadRes = await uploadFileToMinIO(
-            fileBuffer,
-            seedFile.fileName,
-            seedFile.mimeType
-          );
-          if (uploadRes && uploadRes.url) {
-            finalUrl = uploadRes.url;
-            bucket = uploadRes.bucket;
-            key = uploadRes.key;
-            console.log(`✅ MinIO Upload Success: ${seedFile.fileName} ➔ ${finalUrl}`);
-          }
-        } catch (err) {
-          console.warn(`⚠️ MinIO Upload Fallback for ${seedFile.fileName}:`, err.message);
-        }
+    console.log("🔄 Processing University logoSrc and imageSrc...");
+    const universities = await University.find({}).lean();
+    for (const uni of universities) {
+      const updates = {};
+      if (uni.logoSrc && typeof uni.logoSrc === "string") {
+        const logoId = await findOrCreateMedia(uni.logoSrc, `${uni.name} Logo`);
+        if (logoId) updates.logoSrc = logoId;
       }
-
-      // Save / Update in Media collection
-      const mediaDoc = await Media.findOneAndUpdate(
-        { name: seedFile.fileName },
-        {
-          name: seedFile.fileName,
-          alt: seedFile.alt,
-          url: finalUrl,
-          bucket: bucket,
-          key: key,
-          fileName: seedFile.fileName,
-          mimeType: seedFile.mimeType,
-          size: fileBuffer ? fileBuffer.length : 0,
-          enabled: true,
-          removed: false,
-        },
-        { upsert: true, new: true }
-      );
-
-      uploadedMediaMap[seedFile.fileName] = mediaDoc.url;
-      console.log(`💾 Saved Media document: ${seedFile.fileName} (${mediaDoc.url})`);
+      if (uni.imageSrc && typeof uni.imageSrc === "string") {
+        const imageId = await findOrCreateMedia(uni.imageSrc, `${uni.name} Campus`);
+        if (imageId) updates.imageSrc = imageId;
+      }
+      if (Object.keys(updates).length > 0) {
+        await University.updateOne({ _id: uni._id }, { $set: updates });
+        console.log(`✅ Updated University "${uni.name}" with Media ObjectIds.`);
+      }
     }
 
-    // Update SiteSetting default record with new media URLs
-    if (Object.keys(uploadedMediaMap).length > 0) {
-      console.log("⚙️ Updating SiteSetting with Media URLs...");
-      const updateData = {};
-      if (uploadedMediaMap["favicon.ico"]) updateData.faviconIco = uploadedMediaMap["favicon.ico"];
-      if (uploadedMediaMap["favicon.svg"]) updateData.faviconSvg = uploadedMediaMap["favicon.svg"];
-      if (uploadedMediaMap["favicon-96x96.png"]) updateData.favicon96 = uploadedMediaMap["favicon-96x96.png"];
-      if (uploadedMediaMap["apple-touch-icon.png"]) updateData.appleTouchIcon = uploadedMediaMap["apple-touch-icon.png"];
-      if (uploadedMediaMap["sode-homepage-og-card-image.png"]) updateData.ogImage = uploadedMediaMap["sode-homepage-og-card-image.png"];
-
-      await SiteSetting.findOneAndUpdate(
-        { settingKey: "default_site_setting" },
-        { ...updateData, enabled: true, removed: false },
-        { upsert: true, new: true }
-      );
-      console.log("✅ SiteSettings updated with Media URLs!");
+    console.log("🔄 Processing Course image and logo...");
+    const courses = await Course.find({}).lean();
+    for (const course of courses) {
+      const updates = {};
+      if (course.image && typeof course.image === "string") {
+        const imgId = await findOrCreateMedia(course.image, `${course.title} Image`);
+        if (imgId) updates.image = imgId;
+      }
+      if (course.logo && typeof course.logo === "string") {
+        const logoId = await findOrCreateMedia(course.logo, `${course.title} Logo`);
+        if (logoId) updates.logo = logoId;
+      }
+      if (Object.keys(updates).length > 0) {
+        await Course.updateOne({ _id: course._id }, { $set: updates });
+        console.log(`✅ Updated Course "${course.title}" with Media ObjectIds.`);
+      }
     }
 
-    console.log("🎉 Media Seeding Complete!");
+    console.log("\n🎉 All static media paths converted to dynamic Media ObjectIds!");
   } catch (error) {
-    console.error("❌ Media Seed Error:", error);
+    console.error("❌ Error seeding media:", error);
+  } finally {
+    await mongoose.disconnect();
+    console.log("🔌 MongoDB disconnected.");
   }
 }
 
-if (require.main === module) {
-  seedMediaAssets().then(() => mongoose.connection.close());
-}
-
-module.exports = { seedMediaAssets };
+seedMediaAndMigrateReferences();

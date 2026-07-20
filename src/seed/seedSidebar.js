@@ -4,31 +4,97 @@ require("dotenv").config();
 const mongoose = require("mongoose");
 const { Sidebar } = require("../model/Sidebar");
 
-// Only new / missing sidebar items to add
-const missingSidebarItems = [
+const MONGODB_URI =
+  process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm";
+
+const completeSidebarItems = [
+  // 📌 Site Content
+  {
+    title: "Categories",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 1,
+    icon: { name: "Tags", library: "lucide" },
+    path: "/admin-dashboard/categories",
+    enabled: true,
+  },
+  {
+    title: "Durations",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 2,
+    icon: { name: "Clock", library: "lucide" },
+    path: "/admin-dashboard/durations",
+    enabled: true,
+  },
+  {
+    title: "Eligibility",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 3,
+    icon: { name: "CheckCircle", library: "lucide" },
+    path: "/admin-dashboard/eligibility",
+    enabled: true,
+  },
+  {
+    title: "Fees",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 4,
+    icon: { name: "DollarSign", library: "lucide" },
+    path: "/admin-dashboard/fee",
+    enabled: true,
+  },
   {
     title: "Courses",
     section: "Site Content",
     sectionOrder: 2,
-    itemOrder: 2,
+    itemOrder: 4,
     icon: { name: "GraduationCap", library: "lucide" },
     path: "/admin-dashboard/courses",
+    enabled: true,
+  },
+  {
+    title: "Subcourses",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 5,
+    icon: { name: "BookOpen", library: "lucide" },
+    path: "/admin-dashboard/subcourses",
     enabled: true,
   },
   {
     title: "Universities",
     section: "Site Content",
     sectionOrder: 2,
-    itemOrder: 3,
+    itemOrder: 6,
     icon: { name: "Building2", library: "lucide" },
     path: "/admin-dashboard/universities",
+    enabled: true,
+  },
+  {
+    title: "Partner Universities",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 7,
+    icon: { name: "Building", library: "lucide" },
+    path: "/admin-dashboard/partner-universities",
+    enabled: true,
+  },
+  {
+    title: "Header Links",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 8,
+    icon: { name: "Menu", library: "lucide" },
+    path: "/admin-dashboard/headers",
     enabled: true,
   },
   {
     title: "FAQs",
     section: "Site Content",
     sectionOrder: 2,
-    itemOrder: 4,
+    itemOrder: 9,
     icon: { name: "HelpCircle", library: "lucide" },
     path: "/admin-dashboard/faqs",
     enabled: true,
@@ -37,9 +103,29 @@ const missingSidebarItems = [
     title: "Media Library",
     section: "Site Content",
     sectionOrder: 2,
-    itemOrder: 5,
+    itemOrder: 10,
     icon: { name: "Image", library: "lucide" },
     path: "/admin-dashboard/media",
+    enabled: true,
+  },
+
+  // 📌 User Control
+  {
+    title: "Users",
+    section: "User Control",
+    sectionOrder: 4,
+    itemOrder: 1,
+    icon: { name: "Users", library: "lucide" },
+    path: "/admin-dashboard/users",
+    enabled: true,
+  },
+  {
+    title: "Roles",
+    section: "User Control",
+    sectionOrder: 4,
+    itemOrder: 2,
+    icon: { name: "Shield", library: "lucide" },
+    path: "/admin-dashboard/roles",
     enabled: true,
   },
   {
@@ -58,6 +144,17 @@ const missingSidebarItems = [
     itemOrder: 4,
     icon: { name: "Building", library: "lucide" },
     path: "/admin-dashboard/tenants",
+    enabled: true,
+  },
+
+  // 📌 Settings
+  {
+    title: "Sidebar Items",
+    section: "Settings",
+    sectionOrder: 5,
+    itemOrder: 1,
+    icon: { name: "LayoutList", library: "lucide" },
+    path: "/admin-dashboard/sidebar",
     enabled: true,
   },
   {
@@ -80,35 +177,31 @@ const missingSidebarItems = [
   },
 ];
 
-async function seedMissingSidebarItems() {
+async function seedAllSidebarItems() {
   try {
-    const mongoUri =
-      process.env.MONGODB_URI ||
-      "mongodb://crmadmin:Abhishek2028@172.105.37.57:27017/sode?authSource=admin";
-
     console.log("🍃 Connecting to MongoDB...");
-    await mongoose.connect(mongoUri);
+    await mongoose.connect(MONGODB_URI);
 
-    console.log("🔄 Checking and inserting missing Sidebar items...");
+    console.log("🔄 Upserting all complete Sidebar items...");
 
     let addedCount = 0;
-    for (const item of missingSidebarItems) {
-      const exists = await Sidebar.exists({ path: item.path });
-      if (!exists) {
-        await Sidebar.create(item);
-        console.log(`✅ Created missing sidebar item: ${item.title} (${item.path})`);
-        addedCount++;
-      } else {
-        console.log(`ℹ️ Item already exists, skipping: ${item.title}`);
-      }
+    for (const item of completeSidebarItems) {
+      await Sidebar.findOneAndUpdate(
+        { path: item.path },
+        { $set: item },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+      );
+      console.log(`✅ Synced sidebar item: ${item.title} (${item.path})`);
+      addedCount++;
     }
 
-    console.log(`🎉 Done! ${addedCount} missing sidebar items created.`);
-    process.exit(0);
+    console.log(`🎉 Done! All ${addedCount} sidebar items successfully synced!`);
   } catch (error) {
     console.error("❌ Error seeding sidebar items:", error);
-    process.exit(1);
+  } finally {
+    await mongoose.disconnect();
+    console.log("🔌 MongoDB disconnected.");
   }
 }
 
-seedMissingSidebarItems();
+seedAllSidebarItems();
