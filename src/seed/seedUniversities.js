@@ -1,12 +1,50 @@
 "use strict";
 
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 const { University } = require("../model/University");
 const { PartnerUniversity } = require("../model/PartnerUniversity");
+const { Course } = require("../model/Course");
+const { Media } = require("../model/Media");
 
 const MONGODB_URI =
   process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm";
+
+function getFileName(url) {
+  if (!url) return "file";
+  const parts = url.split("/");
+  return parts[parts.length - 1] || "file";
+}
+
+async function findOrCreateMedia(url, defaultName = "Media Asset") {
+  if (!url || typeof url !== "string") return null;
+  const cleanUrl = url.trim();
+  if (!cleanUrl) return null;
+
+  let media = await Media.findOne({ url: cleanUrl });
+  if (!media) {
+    const fileName = getFileName(cleanUrl);
+    const mimeType = fileName.endsWith(".png")
+      ? "image/png"
+      : fileName.endsWith(".webp")
+      ? "image/webp"
+      : "image/jpeg";
+
+    media = await Media.create({
+      name: defaultName || fileName,
+      alt: defaultName || fileName,
+      url: cleanUrl,
+      bucket: "public-assets",
+      key: `assets/${fileName}`,
+      fileName,
+      mimeType,
+      size: 1024,
+      enabled: true,
+    });
+  }
+  return media._id;
+}
 
 const universitiesData = [
   {
@@ -169,6 +207,48 @@ const universitiesData = [
     order: 10,
     featured: true,
   },
+  {
+    name: "Subharti University",
+    slug: "subharti-university",
+    logoSrc: "/assets/images/subharti-logo.jpg",
+    imageSrc: "/assets/images/subharti-image.jpg",
+    courses: ["Online MBA", "Online BBA", "Online BA", "Online MA"],
+    brochureUrl: "/assets/pdf/subharti_brochure.pdf",
+    location: "Meerut, UP, India",
+    established: "2008",
+    approvals: ["UGC-DEB Approved", "NAAC A Grade", "AICTE"],
+    rating: 4.5,
+    reviewsCount: 845,
+    examMode: "Online / Assignment-Based",
+    emiStarts: "₹2,999/month",
+    paragraphs: [
+      "Swami Vivekanand Subharti University is a top State Private University offering high-quality distance education courses approved by UGC-DEB.",
+      "The university focuses on making higher education flexible, affordable, and accessible for working professionals across India.",
+    ],
+    order: 11,
+    featured: true,
+  },
+  {
+    name: "Mangalayatan University",
+    slug: "mangalayatan-university",
+    logoSrc: "/assets/images/mangalayatan-logo.jpg",
+    imageSrc: "/assets/images/mangalayatan-image.jpg",
+    courses: ["Online MCA", "Online BCA", "Online MBA"],
+    brochureUrl: "/assets/pdf/mangalayatan_brochure.pdf",
+    location: "Aligarh, UP, India",
+    established: "2006",
+    approvals: ["UGC-DEB Approved", "NAAC A+ Grade", "AICTE"],
+    rating: 4.6,
+    reviewsCount: 620,
+    examMode: "100% Online",
+    emiStarts: "₹3,499/month",
+    paragraphs: [
+      "Mangalayatan University is a premier NAAC A+ accredited institution offering career-oriented online degree programs.",
+      "Programs are designed with academic flexibility and industry-relevant syllabus for modern working professionals.",
+    ],
+    order: 12,
+    featured: true,
+  },
 ];
 
 async function seedUniversitiesAndPartners() {
@@ -185,6 +265,9 @@ async function seedUniversitiesAndPartners() {
     console.log("🗑️ Cleaned up partneruniversities collection.");
 
     for (const item of universitiesData) {
+      const logoMediaId = await findOrCreateMedia(item.logoSrc, `${item.name} Logo`);
+      const imageMediaId = await findOrCreateMedia(item.imageSrc, `${item.name} Image`);
+
       // 1️⃣ Upsert in University model (ONLY clean fields: name, slug, logoSrc, imageSrc, order, enabled)
       const uniDoc = await University.findOneAndUpdate(
         { slug: item.slug },
@@ -192,8 +275,8 @@ async function seedUniversitiesAndPartners() {
           $set: {
             name: item.name,
             slug: item.slug,
-            logoSrc: item.logoSrc,
-            imageSrc: item.imageSrc,
+            logoSrc: logoMediaId,
+            imageSrc: imageMediaId,
             order: item.order,
             enabled: true,
           },
@@ -201,18 +284,50 @@ async function seedUniversitiesAndPartners() {
         { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
       );
 
-      // 2️⃣ Create in PartnerUniversity model (strictly linked to University._id)
+      // Resolve Course ObjectIds from master Course collection
+      const courseObjectIds = [];
+      if (Array.isArray(item.courses) && item.courses.length > 0) {
+        for (const courseTitle of item.courses) {
+          const cleanSlug = courseTitle
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-|-$/g, "");
+          let courseDoc = await Course.findOne({
+            $or: [
+              { title: new RegExp(`^${courseTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") },
+              { slug: cleanSlug },
+            ],
+          });
+          if (!courseDoc) {
+            courseDoc = await Course.create({
+              title: courseTitle,
+              slug: cleanSlug,
+              enabled: true,
+            });
+          }
+          courseObjectIds.push(courseDoc._id);
+        }
+      }
+
+      // 2️⃣ Create in PartnerUniversity model (strictly linked to University._id and Course._ids)
       await PartnerUniversity.create({
         university: uniDoc._id,
-        courses: item.courses,
+        courses: courseObjectIds,
         brochureUrl: item.brochureUrl,
         paragraphs: item.paragraphs,
+        location: item.location || "India / Global",
+        established: item.established || "2000",
+        approvals: item.approvals || ["UGC", "DEB", "WES", "AICTE"],
+        rating: item.rating || 4.8,
+        reviewsCount: item.reviewsCount || 350,
+        examMode: item.examMode || "100% Online / Assignment-Based",
+        emiStarts: item.emiStarts || "₹4,999/month",
         order: item.order,
         featured: item.featured,
         enabled: true,
       });
 
-      console.log(`✅ Synced Clean University & PartnerUniversity: ${item.name} (${uniDoc._id})`);
+      console.log(`✅ Synced Clean University & PartnerUniversity: ${item.name} (${uniDoc._id}) with ${courseObjectIds.length} course ObjectIds`);
     }
 
     console.log("\n🎉 All universities and partner universities successfully cleaned and synced!");

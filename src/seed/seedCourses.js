@@ -1,8 +1,10 @@
 "use strict";
 
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 const { Course } = require("../model/Course");
+const { PartnerCourse } = require("../model/PartnerCourse");
 const { Category } = require("../model/Category");
 const { Duration } = require("../model/Duration");
 const { Eligibility } = require("../model/Eligibility");
@@ -355,7 +357,17 @@ async function seedCourses() {
     console.log("🍃 Connecting to MongoDB...");
     await mongoose.connect(MONGODB_URI);
 
-    console.log("🔄 Upserting course data with populated Media ObjectIds...");
+    console.log("🧹 Cleaning up old course data...");
+    try {
+      await mongoose.connection.db.collection("courses").dropIndexes();
+    } catch (e) {}
+    try {
+      await mongoose.connection.db.collection("partnercourses").dropIndexes();
+    } catch (e) {}
+
+    await Course.deleteMany({});
+    await PartnerCourse.deleteMany({});
+    console.log("🗑️ Cleaned up courses and partnercourses collections.");
 
     const categories = await Category.find({});
     const durations = await Duration.find({});
@@ -376,31 +388,59 @@ async function seedCourses() {
       const imgMediaId = await findOrCreateMedia(p.image, `${p.title} Image`);
       const logoMediaId = await findOrCreateMedia(p.logo, `${p.title} Logo`);
 
+      const defaultSyllabus = [
+        "Semester 1: Principles of Management, Managerial Economics & Communication",
+        "Semester 2: Operations Management, Marketing Strategy & Financial Management",
+        "Semester 3: Specialization Core, Data Analytics & Applied Research",
+        "Semester 4: Electives, Project Work & Corporate Governance",
+      ];
+
+      const defaultCareers = "Management Consultant, Business Analyst, Product Leader, Strategy Director, Executive Manager";
+
       const coursePayload = {
         title: p.title,
         slug: p.slug,
-        category: catId,
-        duration: durId,
-        eligibility: elgId,
         university: uniId,
-        image: imgMediaId,
         logo: logoMediaId,
-        description: p.description,
+        image: imgMediaId,
         brochureUrl: p.brochureUrl,
+        syllabus: p.syllabus || defaultSyllabus,
+        careers: p.careers || defaultCareers,
         featured: p.featured,
         order: p.order,
         enabled: true,
       };
 
-      await Course.findOneAndUpdate(
+      const courseDoc = await Course.findOneAndUpdate(
         { slug: p.slug },
         { $set: coursePayload },
         { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
       );
-      console.log(`✅ Synced Course: ${p.title} (${p.slug}) -> Image Media: ${imgMediaId}`);
+
+      // 2️⃣ Upsert PartnerCourse (linking courseDoc._id and category)
+      const partnerCoursePayload = {
+        course: courseDoc._id,
+        category: catId,
+        description: p.description,
+        duration: durId,
+        eligibility: elgId,
+        syllabus: p.syllabus || defaultSyllabus,
+        careers: p.careers || defaultCareers,
+        featured: p.featured,
+        order: p.order,
+        enabled: true,
+      };
+
+      await PartnerCourse.findOneAndUpdate(
+        { course: courseDoc._id, category: catId },
+        { $set: partnerCoursePayload },
+        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+      );
+
+      console.log(`✅ Synced Course "${p.title}" (${courseDoc._id}) & PartnerCourse for category (${catId})`);
     }
 
-    console.log("\n🎉 All 20 courses successfully synced with Media ObjectIds!");
+    console.log("\n🎉 All courses and partner courses successfully synced with Media ObjectIds!");
   } catch (error) {
     console.error("❌ Error seeding courses:", error);
   } finally {

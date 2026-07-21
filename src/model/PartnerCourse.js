@@ -3,7 +3,7 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
-const courseSchema = new Schema(
+const partnerCourseSchema = new Schema(
   {
     removed: {
       type: Boolean,
@@ -19,23 +19,10 @@ const courseSchema = new Schema(
       default: true,
       index: true,
     },
-    title: {
-      type: String,
-      required: [true, "Course title is required"],
-      trim: true,
-    },
-    slug: {
-      type: String,
-      required: [true, "Course slug is required"],
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true,
-    },
-    university: {
+    course: {
       type: Schema.Types.ObjectId,
-      ref: "University",
-      default: null,
+      ref: "Course",
+      required: [true, "Course reference is required"],
       index: true,
     },
     category: {
@@ -43,6 +30,11 @@ const courseSchema = new Schema(
       ref: "Category",
       default: null,
       index: true,
+    },
+    description: {
+      type: String,
+      default: null,
+      trim: true,
     },
     duration: {
       type: Schema.Types.ObjectId,
@@ -55,29 +47,6 @@ const courseSchema = new Schema(
       ref: "Eligibility",
       default: null,
       index: true,
-    },
-    logo: {
-      type: Schema.Types.ObjectId,
-      ref: "Media",
-      default: null,
-      index: true,
-    },
-    image: {
-      type: Schema.Types.ObjectId,
-      ref: "Media",
-      default: null,
-      index: true,
-    },
-    fee: {
-      type: Schema.Types.ObjectId,
-      ref: "Fee",
-      default: null,
-      index: true,
-    },
-    brochureUrl: {
-      type: String,
-      default: null,
-      trim: true,
     },
     syllabus: [
       {
@@ -111,9 +80,8 @@ const courseSchema = new Schema(
   }
 );
 
-courseSchema.index({ university: 1, removed: 1, enabled: 1 });
-courseSchema.index({ slug: 1, removed: 1 });
+partnerCourseSchema.index({ course: 1, removed: 1, enabled: 1 });
 
-const Course = mongoose.model("Course", courseSchema);
+const PartnerCourse = mongoose.model("PartnerCourse", partnerCourseSchema);
 
-module.exports = { Course };
+module.exports = { PartnerCourse };

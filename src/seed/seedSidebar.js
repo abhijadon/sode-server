@@ -1,6 +1,7 @@
 "use strict";
 
-require("dotenv").config();
+const path = require("path");
+require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 const { Sidebar } = require("../model/Sidebar");
 
@@ -55,10 +56,19 @@ const completeSidebarItems = [
     enabled: true,
   },
   {
-    title: "Subcourses",
+    title: "Partner Courses",
     section: "Site Content",
     sectionOrder: 2,
     itemOrder: 5,
+    icon: { name: "BookMarked", library: "lucide" },
+    path: "/admin-dashboard/partner-courses",
+    enabled: true,
+  },
+  {
+    title: "Subcourses",
+    section: "Site Content",
+    sectionOrder: 2,
+    itemOrder: 6,
     icon: { name: "BookOpen", library: "lucide" },
     path: "/admin-dashboard/subcourses",
     enabled: true,

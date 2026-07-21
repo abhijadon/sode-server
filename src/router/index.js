@@ -140,6 +140,44 @@ const populateMap = {
       path: "university",
       select: "name slug logoSrc imageSrc",
     },
+    {
+      path: "courses",
+      select: "_id title slug category image logo",
+    },
+  ],
+  partnercourse: [
+    {
+      path: "course",
+      select: "title slug category",
+    },
+    {
+      path: "university",
+      select: "name slug logoSrc imageSrc",
+    },
+    {
+      path: "category",
+      select: "name slug type",
+    },
+    {
+      path: "duration",
+      select: "title slug months",
+    },
+    {
+      path: "eligibility",
+      select: "title slug",
+    },
+    {
+      path: "fee",
+      select: "title amount currency slug",
+    },
+    {
+      path: "image",
+      select: "url alt name",
+    },
+    {
+      path: "logo",
+      select: "url alt name",
+    },
   ],
 };
 
@@ -156,13 +194,13 @@ const optionsSelectMap = {
   eligibility: "_id title slug enabled order",
   fee: "_id title amount currency slug enabled order",
   media: "_id name url alt fileName enabled",
-  course: "_id title slug category university logo enabled",
+  course: "_id title slug category logo image enabled",
+  partnercourse: "_id title slug course university category logo enabled",
   subcourse: "_id title slug course fee duration enabled",
   university: "_id name slug logoSrc enabled",
   partneruniversity: "_id name slug logoSrc imageSrc brochureUrl courses paragraphs featured enabled order",
   pagemeta: "_id pageName pagePath title enabled",
   sitesetting: "_id siteName siteUrl gtmId enabled",
-  media: "_id name alt url mimeType bucket key enabled",
 };
 
 module.exports = async function (app, options) {
@@ -293,12 +331,20 @@ module.exports = async function (app, options) {
 
     // ✅ SPECIAL TREE ROUTE FOR HEADER (Public)
     if (entity === "header") {
-      routes.push({
-        method: "GET",
-        url: `/${entity}/tree`,
-        handler: HeaderController.getWebsiteHeaders,
-        preValidation: null,
-      });
+      routes.push(
+        {
+          method: "GET",
+          url: `/${entity}/tree`,
+          handler: HeaderController.getWebsiteHeaders,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: HeaderController.getWebsiteHeaders,
+          preValidation: null,
+        }
+      );
     }
 
     // ✅ SPECIAL TREE ROUTE FOR SIDEBAR (Protected by Full Security & RBAC Pipeline)
@@ -325,6 +371,18 @@ module.exports = async function (app, options) {
           url: `/${entity}/website-list`,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/courses/website-read`,
+          handler: CourseController.getWebsiteCourseBySlug,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-read`,
+          handler: CourseController.getWebsiteCourseBySlug,
+          preValidation: null,
         }
       );
     }
@@ -334,8 +392,8 @@ module.exports = async function (app, options) {
       routes.push(
         {
           method: "GET",
-          url: `/universities/website-list`,
-          handler: UniversityController.getWebsiteUniversities,
+          url: `/university/compare`,
+          handler: UniversityController.getWebsiteUniversitiesCompare,
           preValidation: null,
         },
         {
@@ -351,6 +409,12 @@ module.exports = async function (app, options) {
           method: "GET",
           url: `/partneruniversities/website-list`,
           handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/partneruniversities/compare`,
+          handler: UniversityController.getWebsiteUniversitiesCompare,
           preValidation: null,
         },
         {

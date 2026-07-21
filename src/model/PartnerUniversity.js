@@ -27,8 +27,8 @@ const partnerUniversitySchema = new Schema(
     },
     courses: [
       {
-        type: String,
-        trim: true,
+        type: Schema.Types.ObjectId,
+        ref: "Course",
       },
     ],
     brochureUrl: {
@@ -42,6 +42,40 @@ const partnerUniversitySchema = new Schema(
         trim: true,
       },
     ],
+    location: {
+      type: String,
+      default: "India / Global",
+      trim: true,
+    },
+    established: {
+      type: String,
+      default: "2000",
+      trim: true,
+    },
+    approvals: [
+      {
+        type: String,
+        trim: true,
+      },
+    ],
+    rating: {
+      type: Number,
+      default: 4.8,
+    },
+    reviewsCount: {
+      type: Number,
+      default: 250,
+    },
+    examMode: {
+      type: String,
+      default: "100% Online / Assignment-Based",
+      trim: true,
+    },
+    emiStarts: {
+      type: String,
+      default: "₹4,999/month",
+      trim: true,
+    },
     order: {
       type: Number,
       default: 0,

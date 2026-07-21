@@ -11,7 +11,7 @@ const headerSchema = new Schema(
     parentId: {
       type: Schema.Types.ObjectId,
       ref: "Header",
-      default: null, // यदि null है, तो यह मुख्य (Parent) मेन्यू है।
+      default: null,
       index: true,
     },
 
@@ -73,7 +73,6 @@ const headerSchema = new Schema(
       default: null,
     },
 
-    // 🔥 ADVANCED ICON SYSTEM INTEGRATION
     icon: {
       name: {
         type: String,
@@ -119,6 +118,48 @@ const headerSchema = new Schema(
       default: true,
     },
 
+    // Logo & Course/University/Media Linkage (Pure ObjectId References to Media Collection)
+    mediaId: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+    },
+
+    logoSrc: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+    },
+
+    showLogo: {
+      type: Boolean,
+      default: true,
+    },
+
+    relatedCourse: {
+      type: Schema.Types.ObjectId,
+      ref: "Course",
+      default: null,
+    },
+
+    relatedUniversity: {
+      type: Schema.Types.ObjectId,
+      ref: "University",
+      default: null,
+    },
+
+    badge: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+
+    badgeColor: {
+      type: String,
+      trim: true,
+      default: "gold",
+    },
+
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
@@ -128,32 +169,11 @@ const headerSchema = new Schema(
   {
     timestamps: true,
     versionKey: false,
-  },
+  }
 );
 
-/**
- * ==========================================
- * ADVANCED INDEXES FOR ULTRA-FAST LOADING
- * ==========================================
- */
+headerSchema.index({ parentId: 1, removed: 1, enabled: 1 });
+headerSchema.index({ slug: 1, removed: 1 });
 
-// 1. फ्रंटएंड पर पैरेंट मेन्यू को फ़ास्ट लोड और सॉर्ट करने के लिए
-headerSchema.index({ parentId: 1, removed: 1, enabled: 1, order: 1 });
-
-// 2. मोबाइल/डेस्कटॉप रिस्पॉन्सिव फ़िल्टर के लिए
-headerSchema.index({
-  parentId: 1,
-  removed: 1,
-  enabled: 1,
-  showOnDesktop: 1,
-  showOnMobile: 1,
-  order: 1,
-});
-
-// 3. सिंगल स्लग और यूजर स्पेसिफिक एडमिन पैनल्स के लिए
-headerSchema.index({ slug: 1 }, { sparse: true });
-headerSchema.index({ userId: 1 }, { sparse: true });
-
-const Header = mongoose.model("Header", headerSchema);
-
-module.exports = { Header };
+const Header = mongoose.models.Header || mongoose.model("Header", headerSchema);
+module.exports = Header;
