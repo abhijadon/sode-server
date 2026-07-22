@@ -31,6 +31,13 @@ const partnerCourseSchema = new Schema(
       default: null,
       index: true,
     },
+    categories: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+        index: true,
+      },
+    ],
     description: {
       type: String,
       default: null,
@@ -105,6 +112,8 @@ const partnerCourseSchema = new Schema(
 );
 
 partnerCourseSchema.index({ course: 1, removed: 1, enabled: 1 });
+partnerCourseSchema.index({ category: 1, removed: 1, enabled: 1 });
+partnerCourseSchema.index({ categories: 1, removed: 1, enabled: 1 });
 
 const PartnerCourse = mongoose.model("PartnerCourse", partnerCourseSchema);
 

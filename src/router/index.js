@@ -14,6 +14,7 @@ const SiteSettingController = require("../controller/sitesetting/sitesetting.con
 const FaqController = require("../controller/faq/faq.controller");
 const MediaController = require("../controller/media/media.controller");
 const HeroController = require("../controller/hero/hero.controller");
+const CategoryController = require("../controller/category/category.controller");
 
 const { authenticate } = require("../middleware/auth/authenticate");
 const { checkPermission } = require("../middleware/auth/checkPermission");
@@ -236,6 +237,16 @@ const populateMap = {
       select: "fullname username email",
     },
   ],
+  page: [
+    {
+      path: "associatedCourse",
+      select: "title slug logo image",
+    },
+    {
+      path: "associatedUniversity",
+      select: "name slug logoSrc imageSrc",
+    },
+  ],
 };
 
 // ✅ ऑप्शंस सेलेक्ट फ़ील्ड्स कॉन्फ़िगरेशन मैप (Router Level Projections)
@@ -265,6 +276,8 @@ const optionsSelectMap = {
   location: "_id name slug pincode city enabled",
   content: "_id title slug contentType summary enabled image category author createdAt",
   rating: "_id rating review title status isVerifiedPurchase createdBy enabled",
+  theme: "_id themeName primaryColor secondaryColor themeMode isDefault enabled",
+  page: "_id title slug pageType associatedCourse associatedUniversity enabled",
 };
 
 module.exports = async function (app, options) {
@@ -490,6 +503,16 @@ module.exports = async function (app, options) {
       );
     }
 
+    // ✅ SPECIAL PUBLIC WEBSITE ROUTE FOR PAGES BUILDER
+    if (entity === "page") {
+      routes.push({
+        method: "GET",
+        url: `/${entity}/website-read`,
+        handler: require("../controller/page/page.controller").getWebsitePageBySlug,
+        preValidation: null,
+      });
+    }
+
     // ✅ SPECIAL PUBLIC WEBSITE ROUTE FOR PAGE META
     if (entity === "pagemeta") {
       routes.push({
@@ -541,6 +564,36 @@ module.exports = async function (app, options) {
           method: "GET",
           url: `/heroes/website-read`,
           handler: HeroController.getWebsiteHero,
+          preValidation: null,
+        }
+      );
+    }
+
+    // ✅ SPECIAL PUBLIC WEBSITE ROUTES FOR CATEGORIES
+    if (entity === "category") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: CategoryController.getWebsiteCategories,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/categories/website-list`,
+          handler: CategoryController.getWebsiteCategories,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-read`,
+          handler: CategoryController.getWebsiteCategoryBySlug,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-tree`,
+          handler: CategoryController.getWebsiteCategoryTree,
           preValidation: null,
         }
       );

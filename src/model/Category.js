@@ -45,6 +45,11 @@ const categorySchema = new Schema(
       default: null,
       index: true,
     },
+    title: {
+      type: String,
+      default: null,
+      trim: true,
+    },
     description: {
       type: String,
       default: null,
@@ -59,6 +64,24 @@ const categorySchema = new Schema(
       type: String,
       default: null,
       trim: true,
+    },
+    logo: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+      index: true,
+    },
+    logoSrc: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+      index: true,
+    },
+    imageSrc: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+      index: true,
     },
     featured: {
       type: Boolean,

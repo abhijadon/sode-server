@@ -1,7 +1,9 @@
 "use strict";
 
+const mongoose = require("mongoose");
 const { PartnerUniversity } = require("../../model/PartnerUniversity");
 const { University } = require("../../model/University");
+const { Category } = require("../../model/Category");
 
 /**
  * GET /partneruniversities/website-list
@@ -24,23 +26,102 @@ const { University } = require("../../model/University");
  */
 async function getWebsiteUniversities(request, reply) {
   try {
-    const partnerUnis = await PartnerUniversity.find({ removed: false, enabled: true })
+    const { limit, page, type, category } = request.query || {};
+
+    const filter = { removed: false, enabled: true };
+
+    if (category && category !== "all") {
+      const foundCat = await Category.findOne({
+        removed: false,
+        $or: [
+          { slug: category },
+          ...(mongoose.Types.ObjectId.isValid(category) ? [{ _id: category }] : []),
+        ],
+      }).lean();
+
+      if (foundCat) {
+        const childCats = await Category.find({
+          removed: false,
+          parentId: foundCat._id,
+        }).select("_id").lean();
+
+        const catIds = [foundCat._id, ...childCats.map((c) => c._id)];
+
+        const matchingBaseUnis = await University.find({
+          removed: false,
+          $or: [
+            { category: { $in: catIds } },
+            { categories: { $in: catIds } },
+          ],
+        }).select("_id").lean();
+
+        const baseUniIds = matchingBaseUnis.map((u) => u._id);
+
+        filter.$or = [
+          { category: { $in: catIds } },
+          { categories: { $in: catIds } },
+          { university: { $in: baseUniIds } },
+        ];
+      }
+    }
+
+    if (type) {
+      const matchingUnis = await University.find({
+        name: new RegExp(type, "i"),
+        removed: false,
+        enabled: true
+      }).select("_id");
+      
+      const uniIds = matchingUnis.map(u => u._id);
+      
+      filter.$or = [
+        ...(filter.$or || []),
+        { type: new RegExp(`^${type}$`, "i") },
+        { university: { $in: uniIds } }
+      ];
+    }
+
+    const limitNum = parseInt(limit, 10) || 0;
+    const pageNum = parseInt(page, 10) || 1;
+
+    let query = PartnerUniversity.find(filter)
+      .populate({
+        path: "category",
+        select: "_id name slug title description logo logoSrc",
+        strictPopulate: false,
+      })
+      .populate({
+        path: "categories",
+        select: "_id name slug title description logo logoSrc",
+        strictPopulate: false,
+      })
       .populate({
         path: "university",
-        select: "_id name slug logoSrc imageSrc",
+        select: "_id name slug logoSrc imageSrc category categories",
         populate: [
           { path: "logoSrc",  select: "_id name alt url", strictPopulate: false },
           { path: "imageSrc", select: "_id name alt url", strictPopulate: false },
+          { path: "category", select: "_id name slug title", strictPopulate: false },
         ],
         strictPopulate: false,
       })
       .populate({
         path: "courses",
-        select: "_id title slug",
+        select: "_id title slug duration eligibility",
+        populate: [
+          { path: "duration", select: "_id title slug months" },
+          { path: "eligibility", select: "_id title slug" },
+        ],
         strictPopulate: false,
       })
-      .sort({ order: 1, createdAt: 1 })
-      .lean();
+      .sort({ order: 1, createdAt: 1 });
+
+    if (limitNum > 0) {
+      const skip = (pageNum - 1) * limitNum;
+      query = query.skip(skip).limit(limitNum);
+    }
+
+    const partnerUnis = await query.lean();
 
     const formatted = (partnerUnis || []).map((p) => {
       const u = p.university && typeof p.university === "object" ? p.university : {};

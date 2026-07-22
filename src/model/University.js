@@ -49,6 +49,18 @@ const universitySchema = new Schema(
       type: Number,
       default: 0,
     },
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
+    },
+    categories: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+      },
+    ],
   },
   {
     timestamps: true,

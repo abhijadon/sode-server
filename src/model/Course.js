@@ -44,6 +44,13 @@ const courseSchema = new Schema(
       default: null,
       index: true,
     },
+    categories: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+        index: true,
+      },
+    ],
     duration: {
       type: Schema.Types.ObjectId,
       ref: "Duration",
@@ -112,6 +119,8 @@ const courseSchema = new Schema(
 );
 
 courseSchema.index({ university: 1, removed: 1, enabled: 1 });
+courseSchema.index({ category: 1, removed: 1, enabled: 1 });
+courseSchema.index({ categories: 1, removed: 1, enabled: 1 });
 courseSchema.index({ slug: 1, removed: 1 });
 
 const Course = mongoose.model("Course", courseSchema);

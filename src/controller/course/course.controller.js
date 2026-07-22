@@ -12,33 +12,49 @@ async function getWebsiteCourses(request, reply) {
     const { search, category, university, course, duration, sort, limit, page } = request.query || {};
 
     // 1️⃣ Mongoose Category Query
-    const categories = await Category.find({
-      removed: false,
-      enabled: true,
-      type: "course",
-    })
-      .sort({ order: 1, createdAt: 1 })
-      .select("_id name slug type")
-      .lean();
-
-    const tabs = [
-      { id: "all", slug: "all", label: "All Programs" },
-      ...(categories || []).map((cat) => ({
-        id: cat.slug,
-        _id: String(cat._id),
-        slug: cat.slug,
-        label: cat.name,
-      })),
-    ];
-
     // Mongoose Filter Builder for PartnerCourse Collection
     const partnerFilter = { removed: false, enabled: true };
 
-    // 1. Mongoose Category Filter
+    // 1. Mongoose Category Filter (Hierarchical parent & child category matching)
+    let catIds = null;
+
     if (category && category !== "all") {
-      const foundCat = categories.find((c) => c.slug === category || String(c._id) === category);
+      const foundCat = await Category.findOne({
+        removed: false,
+        $or: [
+          { slug: category },
+          ...(mongoose.Types.ObjectId.isValid(category) ? [{ _id: category }] : []),
+        ],
+      }).lean();
+
       if (foundCat) {
-        partnerFilter.category = foundCat._id;
+        // Find all child categories belonging to this parent category
+        const childCats = await Category.find({
+          removed: false,
+          parentId: foundCat._id,
+        }).select("_id").lean();
+
+        catIds = [foundCat._id, ...childCats.map((c) => c._id)];
+
+        // Find courses with matching category or categories ObjectId
+        const coursesWithCat = await Course.find({
+          removed: false,
+          $or: [
+            { category: { $in: catIds } },
+            { categories: { $in: catIds } },
+          ],
+        }).select("_id").lean();
+
+        const matchedCatCourseIds = coursesWithCat.map((c) => c._id);
+
+        partnerFilter.$or = [
+          { category: { $in: catIds } },
+          { categories: { $in: catIds } },
+          { course: { $in: matchedCatCourseIds } },
+        ];
+      } else {
+        // If category filter is passed but category is not found, return 0 results
+        partnerFilter._id = new mongoose.Types.ObjectId();
       }
     }
 
@@ -58,9 +74,17 @@ async function getWebsiteCourses(request, reply) {
     }
 
     // 3. Mongoose Course & University Filter Query
+    let hasCourseFilters = false;
     const courseMatch = { removed: false, enabled: true };
+    if (catIds && catIds.length > 0) {
+      courseMatch.$or = [
+        { category: { $in: catIds } },
+        { categories: { $in: catIds } },
+      ];
+    }
 
     if (university && university !== "all") {
+      hasCourseFilters = true;
       const uSlugs = String(university).split(",").map((u) => u.trim());
       const uniDocs = await University.find({
         removed: false,
@@ -76,6 +100,7 @@ async function getWebsiteCourses(request, reply) {
     }
 
     if (course && course !== "all") {
+      hasCourseFilters = true;
       const cTitles = String(course).split(",").map((c) => c.trim());
       courseMatch.$or = [
         { title: { $in: cTitles.map((t) => new RegExp(`^${t}$`, "i")) } },
@@ -84,6 +109,7 @@ async function getWebsiteCourses(request, reply) {
     }
 
     if (search && search.trim().length > 0) {
+      hasCourseFilters = true;
       const sRegex = new RegExp(search.trim(), "i");
       courseMatch.$or = [
         { title: sRegex },
@@ -91,11 +117,11 @@ async function getWebsiteCourses(request, reply) {
       ];
     }
 
-    // Mongoose query for matching Courses
-    const matchedCourseDocs = await Course.find(courseMatch).select("_id").lean();
-    const matchedCourseIds = matchedCourseDocs.map((c) => c._id);
-
-    partnerFilter.course = { $in: matchedCourseIds };
+    if (hasCourseFilters) {
+      const matchedCourseDocs = await Course.find(courseMatch).select("_id").lean();
+      const matchedCourseIds = matchedCourseDocs.map((c) => c._id);
+      partnerFilter.course = { $in: matchedCourseIds };
+    }
 
     // Mongoose Sorting Options
     let mSort = { order: 1, createdAt: -1 };
@@ -122,7 +148,15 @@ async function getWebsiteCourses(request, reply) {
           { path: "fee", select: "_id title amount currency slug" },
         ],
       })
-      .populate({ path: "category", select: "_id name slug type" })
+      .populate({
+        path: "category",
+        select: "_id name slug type title description logo logoSrc image imageSrc order",
+        populate: [
+          { path: "logo", select: "_id name url alt" },
+          { path: "logoSrc", select: "_id name url alt" },
+          { path: "imageSrc", select: "_id name url alt" },
+        ],
+      })
       .populate({ path: "duration", select: "_id title slug months" })
       .populate({ path: "eligibility", select: "_id title slug" })
       .sort(mSort)
@@ -142,7 +176,7 @@ async function getWebsiteCourses(request, reply) {
       };
     });
 
-    if (!programs || programs.length === 0) {
+    if ((!programs || programs.length === 0) && (!category || category === "all")) {
       const masterCourses = await Course.find(courseMatch)
         .populate({ path: "fee", select: "_id title amount currency slug" })
         .populate({ path: "image", select: "_id name url alt" })
@@ -183,7 +217,6 @@ async function getWebsiteCourses(request, reply) {
     return reply.code(200).send({
       success: true,
       result: {
-        tabs,
         programs: paginatedPrograms || [],
         total: totalCount,
         page: pageNum,
@@ -225,7 +258,15 @@ async function getWebsiteCourseBySlug(request, reply) {
     let partnerCourse = null;
     if (courseDoc) {
       partnerCourse = await PartnerCourse.findOne({ course: courseDoc._id, removed: false })
-        .populate({ path: "category", select: "_id name slug type" })
+        .populate({
+          path: "category",
+          select: "_id name slug type title description logo logoSrc image imageSrc order",
+          populate: [
+            { path: "logo", select: "_id name url alt" },
+            { path: "logoSrc", select: "_id name url alt" },
+            { path: "imageSrc", select: "_id name url alt" },
+          ],
+        })
         .populate({ path: "duration", select: "_id title slug months" })
         .populate({ path: "eligibility", select: "_id title slug" })
         .lean();
@@ -247,7 +288,15 @@ async function getWebsiteCourseBySlug(request, reply) {
             { path: "fee", select: "_id title amount currency slug" },
           ],
         })
-        .populate({ path: "category", select: "_id name slug type" })
+        .populate({
+          path: "category",
+          select: "_id name slug type title description logo logoSrc image imageSrc order",
+          populate: [
+            { path: "logo", select: "_id name url alt" },
+            { path: "logoSrc", select: "_id name url alt" },
+            { path: "imageSrc", select: "_id name url alt" },
+          ],
+        })
         .populate({ path: "duration", select: "_id title slug months" })
         .populate({ path: "eligibility", select: "_id title slug" })
         .lean();
@@ -289,8 +338,8 @@ async function getWebsiteCourseBySlug(request, reply) {
       syllabus: (partnerCourse?.syllabus && partnerCourse.syllabus.length > 0)
         ? partnerCourse.syllabus
         : (courseDoc?.syllabus && courseDoc.syllabus.length > 0)
-        ? courseDoc.syllabus
-        : [],
+          ? courseDoc.syllabus
+          : [],
       careers: partnerCourse?.careers || courseDoc?.careers || null,
     };
 

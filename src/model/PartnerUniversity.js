@@ -31,6 +31,18 @@ const partnerUniversitySchema = new Schema(
         ref: "Course",
       },
     ],
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
+    },
+    categories: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+      },
+    ],
     brochureUrl: {
       type: String,
       default: null,

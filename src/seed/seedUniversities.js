@@ -165,6 +165,7 @@ const universitiesData = [
     imageSrc: "/assets/images/iim-image.png",
     courses: [
       "Professional Certificate Programme in HR Management and Analytics",
+      "Executive Program in Business Management & Digital Innovation",
     ],
     brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
     paragraphs: [
@@ -247,6 +248,132 @@ const universitiesData = [
       "Programs are designed with academic flexibility and industry-relevant syllabus for modern working professionals.",
     ],
     order: 12,
+    featured: true,
+  },
+  {
+    name: "IIM Ahmedabad",
+    slug: "iim-ahmedabad",
+    logoSrc: "/assets/images/iim-logo.jpg",
+    imageSrc: "/assets/images/iim-image.png",
+    courses: ["Executive General Management Program (EGMP)"],
+    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Management Ahmedabad (IIMA) is a world-renowned business school located in Gujarat, India.",
+      "It offers specialized executive general management programs for mid-to-senior managers looking to scale business operations and lead strategy."
+    ],
+    order: 13,
+    featured: true,
+  },
+  {
+    name: "IIM Bangalore",
+    slug: "iim-bangalore",
+    logoSrc: "/assets/images/iim-logo.jpg",
+    imageSrc: "/assets/images/iim-image.png",
+    courses: ["Advanced Program in Digital Transformation & AI Strategy"],
+    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Management Bangalore (IIMB) is a premier management institute known for its advanced research and industry-relevant curriculum.",
+      "The digital transformation and AI strategy course empowers tech leaders to navigate business disruptions."
+    ],
+    order: 14,
+    featured: true,
+  },
+  {
+    name: "IIM Calcutta",
+    slug: "iim-calcutta",
+    logoSrc: "/assets/images/iim-logo.jpg",
+    imageSrc: "/assets/images/iim-image.png",
+    courses: ["Executive Program in Growth Strategies & Corporate Finance"],
+    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Management Calcutta (IIMC) is renowned globally for its quantitative finance and strategic management programs.",
+      "The growth strategy and corporate finance program offers corporate scaling capabilities to finance executives."
+    ],
+    order: 15,
+    featured: true,
+  },
+  {
+    name: "IIM Lucknow",
+    slug: "iim-lucknow",
+    logoSrc: "/assets/images/iim-logo.jpg",
+    imageSrc: "/assets/images/iim-image.png",
+    courses: ["Executive Program in Strategic Management & Leadership"],
+    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Management Lucknow (IIML) prepares corporate professionals for senior leadership and competitive strategy formulation.",
+      "Its strategic management programs are highly sought-after in corporate leadership ecosystems."
+    ],
+    order: 16,
+    featured: true,
+  },
+  {
+    name: "IIT Delhi",
+    slug: "iit-delhi",
+    logoSrc: "/assets/images/iiitb-logo.jpg",
+    imageSrc: "/assets/images/iiitb-image.png",
+    courses: ["Executive Certification in Data Science & Machine Learning"],
+    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Technology Delhi (IITD) is a globally recognized research institution at the forefront of technical education.",
+      "The data science and machine learning executive certification delivers advanced theoretical and practical mathematical model-building capabilities."
+    ],
+    order: 17,
+    featured: true,
+  },
+  {
+    name: "IIT Bombay",
+    slug: "iit-bombay",
+    logoSrc: "/assets/images/iiitb-logo.jpg",
+    imageSrc: "/assets/images/iiitb-image.png",
+    courses: ["Executive Certification in AI, Machine Learning & Cloud Computing"],
+    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Technology Bombay (IITB) provides tech professionals with rigorous cloud and deep learning skillsets.",
+      "The AI and machine learning program explores production-ready neural models and data pipelines."
+    ],
+    order: 18,
+    featured: true,
+  },
+  {
+    name: "IIT Madras",
+    slug: "iit-madras",
+    logoSrc: "/assets/images/iiitb-logo.jpg",
+    imageSrc: "/assets/images/iiitb-image.png",
+    courses: ["Executive Program in Data Science & Engineering Analytics"],
+    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Technology Madras (IITM) has consistently ranked as India's top engineering university.",
+      "Its data science and engineering analytics program provides industry professionals with data-driven decision-making toolkits."
+    ],
+    order: 19,
+    featured: true,
+  },
+  {
+    name: "IIT Kanpur",
+    slug: "iit-kanpur",
+    logoSrc: "/assets/images/iiitb-logo.jpg",
+    imageSrc: "/assets/images/iiitb-image.png",
+    courses: ["Executive Program in Cybersecurity & Blockchain Technologies"],
+    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Technology Kanpur (IITK) delivers ethical hacking, penetration testing, and security auditing skillsets.",
+      "The cybersecurity and blockchain program secures corporate networks and transactions against advanced persistent threats."
+    ],
+    order: 20,
+    featured: true,
+  },
+  {
+    name: "IIT Roorkee",
+    slug: "iit-roorkee",
+    logoSrc: "/assets/images/iiitb-logo.jpg",
+    imageSrc: "/assets/images/iiitb-image.png",
+    courses: ["Executive Program in Data Analytics & Applied Finance"],
+    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
+    paragraphs: [
+      "Indian Institute of Technology Roorkee (IITR) is one of India's oldest and most prestigious engineering universities.",
+      "The data analytics and applied finance program bridges tech tools and corporate financial analytics."
+    ],
+    order: 21,
     featured: true,
   },
 ];
