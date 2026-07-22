@@ -52,6 +52,13 @@ const partnerUniversitySchema = new Schema(
       default: "2000",
       trim: true,
     },
+    type: {
+      type: String,
+      enum: ["Global", "State Private", "Deemed", "Central", "Open University", "Autonomous"],
+      default: "Global",
+      trim: true,
+      index: true,
+    },
     approvals: [
       {
         type: String,

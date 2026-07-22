@@ -48,6 +48,30 @@ const partnerCourseSchema = new Schema(
       default: null,
       index: true,
     },
+    university: {
+      type: Schema.Types.ObjectId,
+      ref: "University",
+      default: null,
+      index: true,
+    },
+    logo: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+      index: true,
+    },
+    image: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+      index: true,
+    },
+    fee: {
+      type: Schema.Types.ObjectId,
+      ref: "Fee",
+      default: null,
+      index: true,
+    },
     syllabus: [
       {
         type: String,

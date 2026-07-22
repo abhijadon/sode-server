@@ -15,10 +15,6 @@ async function startServer() {
     // 1. सबसे पहले डेटाबेस कनेक्ट करें
     await connectDB();
 
-    // 1.5 Dynamic Headers MongoDB Seed
-    const { seedHeaders } = require("./seed/seedHeaders");
-    await seedHeaders();
-
     // 2. डेटाबेस कनेक्शन सफल होने के बाद ही Fastify सर्वर पोर्ट ओपन करें
     await app.listen({
       port: PORT,

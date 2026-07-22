@@ -328,7 +328,7 @@ function pagination(Model, populateFields = []) {
       const skip = (sanitizedPage - 1) * sanitizedItems;
 
       const modelName = Model.modelName;
-      const allowedFilterFields = filterableFields[modelName] || [];
+      const allowedFilterFields = filterableFields[modelName] || ["*"];
       const allowedSearchFields = searchableFields[modelName] || [];
 
       // ✅ Build schema-safe base query conditions
@@ -356,9 +356,10 @@ function pagination(Model, populateFields = []) {
       /* =======================================
          🎯 EXACT FILTERS (फ़िल्टर्स)
          ======================================= */
+      const allowAllFilters = allowedFilterFields.includes("*");
       for (const key in filters) {
         if (
-          allowedFilterFields.includes(key) &&
+          (allowAllFilters || allowedFilterFields.includes(key)) &&
           Model.schema &&
           Model.schema.path(key)
         ) {

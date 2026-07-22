@@ -13,6 +13,7 @@ const PageMetaController = require("../controller/pagemeta/pagemeta.controller")
 const SiteSettingController = require("../controller/sitesetting/sitesetting.controller");
 const FaqController = require("../controller/faq/faq.controller");
 const MediaController = require("../controller/media/media.controller");
+const HeroController = require("../controller/hero/hero.controller");
 
 const { authenticate } = require("../middleware/auth/authenticate");
 const { checkPermission } = require("../middleware/auth/checkPermission");
@@ -179,6 +180,62 @@ const populateMap = {
       select: "url alt name",
     },
   ],
+  state: [
+    {
+      path: "country",
+      select: "name slug enabled",
+    },
+  ],
+  city: [
+    {
+      path: "state",
+      select: "name slug country enabled",
+      populate: {
+        path: "country",
+        select: "name slug enabled",
+      },
+    },
+  ],
+  pincode: [
+    {
+      path: "city",
+      select: "name slug state enabled",
+    },
+  ],
+  location: [
+    {
+      path: "pincode",
+      select: "code city enabled",
+    },
+    {
+      path: "city",
+      select: "name slug state enabled",
+      populate: {
+        path: "state",
+        select: "name slug country enabled",
+      },
+    },
+  ],
+  content: [
+    {
+      path: "author",
+      select: "fullname username email",
+    },
+    {
+      path: "category",
+      select: "name slug type",
+    },
+    {
+      path: "image",
+      select: "url alt name",
+    },
+  ],
+  rating: [
+    {
+      path: "createdBy",
+      select: "fullname username email",
+    },
+  ],
 };
 
 // ✅ ऑप्शंस सेलेक्ट फ़ील्ड्स कॉन्फ़िगरेशन मैप (Router Level Projections)
@@ -201,6 +258,13 @@ const optionsSelectMap = {
   partneruniversity: "_id name slug logoSrc imageSrc brochureUrl courses paragraphs featured enabled order",
   pagemeta: "_id pageName pagePath title enabled",
   sitesetting: "_id siteName siteUrl gtmId enabled",
+  country: "_id name slug enabled",
+  state: "_id name slug country enabled",
+  city: "_id name slug state enabled",
+  pincode: "_id code city enabled",
+  location: "_id name slug pincode city enabled",
+  content: "_id title slug contentType summary enabled image category author createdAt",
+  rating: "_id rating review title status isVerifiedPurchase createdBy enabled",
 };
 
 module.exports = async function (app, options) {
@@ -459,6 +523,24 @@ module.exports = async function (app, options) {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: FaqController.getWebsiteFaqs,
+          preValidation: null,
+        }
+      );
+    }
+
+    // ✅ SPECIAL WEBSITE READ ROUTE FOR HERO
+    if (entity === "hero") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/${entity}/website-read`,
+          handler: HeroController.getWebsiteHero,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/heroes/website-read`,
+          handler: HeroController.getWebsiteHero,
           preValidation: null,
         }
       );
