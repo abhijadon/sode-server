@@ -88,6 +88,16 @@ const categorySchema = new Schema(
       default: false,
       index: true,
     },
+    showInStats: {
+      type: Boolean,
+      default: true,
+      index: true,
+    },
+    showInMockup: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
     order: {
       type: Number,
       default: 0,
