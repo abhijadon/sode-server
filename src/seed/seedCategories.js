@@ -352,6 +352,55 @@ async function seedCleanCategories() {
         description: "Artificial Intelligence & Technological Innovation Certification from MIT Sloan.",
         logoUrl: "/assets/images/iiitb-logo.jpg",
       },
+
+      // 🎓 DOCTORATE CHILD CATEGORIES (Parent: Doctorate)
+      {
+        name: "DBA Programs",
+        slug: "dba-programs",
+        type: "course",
+        order: 40,
+        title: "Doctor of Business Administration (DBA)",
+        description: "Specialized Doctor of Business Administration domain categories.",
+        logoUrl: "/assets/images/premium-icon.png",
+      },
+      {
+        name: "Executive PhD",
+        slug: "executive-phd",
+        type: "course",
+        order: 41,
+        title: "Executive PhD in Management",
+        description: "Research domains in executive management and leadership.",
+        logoUrl: "/assets/images/premium-icon.png",
+      },
+      {
+        name: "Doctor of Management",
+        slug: "doctor-of-management",
+        type: "course",
+        order: 42,
+        title: "Doctor of Management Category",
+        description: "Doctoral research in organizational management.",
+        logoUrl: "/assets/images/premium-icon.png",
+      },
+
+      // 🎓 NESTED SUB-CHILDREN (Parent: DBA Programs)
+      {
+        name: "European DBA",
+        slug: "european-dba",
+        type: "course",
+        order: 43,
+        title: "European Accredited DBA Programs",
+        description: "DBA specialization categories awarded by European universities.",
+        logoUrl: "/assets/images/premium-icon.png",
+      },
+      {
+        name: "US DBA",
+        slug: "us-dba",
+        type: "course",
+        order: 44,
+        title: "US Accredited DBA Degrees",
+        description: "DBA specialization categories accredited by US accreditation bodies.",
+        logoUrl: "/assets/images/premium-icon.png",
+      },
     ];
 
     const categoryMap = new Map();
@@ -404,6 +453,15 @@ async function seedCleanCategories() {
       { childSlug: "wharton-school", parentSlug: "top-global-business-schools" },
       { childSlug: "london-business-school", parentSlug: "top-global-business-schools" },
       { childSlug: "mit-sloan", parentSlug: "top-global-business-schools" },
+
+      // Doctorate Children
+      { childSlug: "dba-programs", parentSlug: "doctorate" },
+      { childSlug: "executive-phd", parentSlug: "doctorate" },
+      { childSlug: "doctor-of-management", parentSlug: "doctorate" },
+
+      // Sub-children under DBA Programs
+      { childSlug: "european-dba", parentSlug: "dba-programs" },
+      { childSlug: "us-dba", parentSlug: "dba-programs" },
     ];
 
     for (const rel of parentRelations) {
@@ -436,6 +494,12 @@ async function seedCleanCategories() {
     const iimLucknowCat = categoryMap.get("iim-lucknow");
     const iitDelhiCat = categoryMap.get("iit-delhi");
 
+    const dbaProgramsCat = categoryMap.get("dba-programs");
+    const executivePhdCat = categoryMap.get("executive-phd");
+    const doctorOfManagementCat = categoryMap.get("doctor-of-management");
+    const europeanDbaCat = categoryMap.get("european-dba");
+    const usDbaCat = categoryMap.get("us-dba");
+
     // 6️⃣ Re-map courses to specific test categories
     const rawCourses = await mongoose.connection.db.collection("courses").find({}).toArray();
 
@@ -445,8 +509,18 @@ async function seedCleanCategories() {
       let targetCat = masterCat;
 
       if (titleLower.includes("doctor") || titleLower.includes("dba") || titleLower.includes("phd")) {
-        // Doctorate = Courses ONLY
-        targetCat = doctorateCat;
+        // Map Doctorate courses to Subcategories (DBA Programs / Executive PhD / European DBA / US DBA)
+        if (titleLower.includes("european") || titleLower.includes("geneva")) {
+          targetCat = europeanDbaCat || dbaProgramsCat;
+        } else if (titleLower.includes("us") || titleLower.includes("gate")) {
+          targetCat = usDbaCat || dbaProgramsCat;
+        } else if (titleLower.includes("phd")) {
+          targetCat = executivePhdCat || dbaProgramsCat;
+        } else if (titleLower.includes("management")) {
+          targetCat = doctorOfManagementCat || dbaProgramsCat;
+        } else {
+          targetCat = dbaProgramsCat;
+        }
       } else if (i === 0 && iimAhmedabadCat) {
         // IIM Ahmedabad = BOTH Courses + University
         targetCat = iimAhmedabadCat;
@@ -480,6 +554,11 @@ async function seedCleanCategories() {
       { slug: "harvard-business-school", catDoc: topGlobalCat, name: "Harvard Business School" },
       { slug: "insead", catDoc: topGlobalCat, name: "INSEAD" },
       { slug: "wharton-school", catDoc: topGlobalCat, name: "Wharton School" },
+      { slug: "ssbm-geneva", catDoc: europeanDbaCat || dbaProgramsCat, name: "SSBM Geneva" },
+      { slug: "golden-gate-university", catDoc: usDbaCat || dbaProgramsCat, name: "Golden Gate University" },
+      { slug: "rushford-business-school", catDoc: dbaProgramsCat, name: "Rushford Business School" },
+      { slug: "esgc-paris", catDoc: executivePhdCat, name: "ESGC Paris" },
+      { slug: "edgewood-university", catDoc: doctorOfManagementCat, name: "Edgewood University" },
     ];
 
     for (const cfg of uniTestConfigs) {

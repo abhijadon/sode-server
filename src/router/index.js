@@ -20,6 +20,7 @@ const { authenticate } = require("../middleware/auth/authenticate");
 const { checkPermission } = require("../middleware/auth/checkPermission");
 const { report_system } = require("../middleware/auth/report_system");
 const { accesspermission } = require("../middleware/auth/accesspermission");
+const { useCache } = require("../middleware/cache.middleware");
 
 const appModelsFiles = globSync("./src/model/**/*.js");
 
@@ -442,24 +443,28 @@ module.exports = async function (app, options) {
           url: `/courses/website-list`,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/courses/website-read`,
           handler: CourseController.getWebsiteCourseBySlug,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-read`,
           handler: CourseController.getWebsiteCourseBySlug,
           preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -472,12 +477,14 @@ module.exports = async function (app, options) {
           url: `/university/compare`,
           handler: UniversityController.getWebsiteUniversitiesCompare,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: UniversityController.getWebsiteUniversities,
           preValidation: null,
+          ...useCache(300),
         }
       );
     } else if (entity === "partneruniversity") {
@@ -487,18 +494,21 @@ module.exports = async function (app, options) {
           url: `/partneruniversities/website-list`,
           handler: UniversityController.getWebsiteUniversities,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/partneruniversities/compare`,
           handler: UniversityController.getWebsiteUniversitiesCompare,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: UniversityController.getWebsiteUniversities,
           preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -510,6 +520,7 @@ module.exports = async function (app, options) {
         url: `/${entity}/website-read`,
         handler: require("../controller/page/page.controller").getWebsitePageBySlug,
         preValidation: null,
+        ...useCache(300),
       });
     }
 
@@ -520,6 +531,7 @@ module.exports = async function (app, options) {
         url: `/${entity}/website-read`,
         handler: PageMetaController.getWebsitePageMeta,
         preValidation: null,
+        ...useCache(300),
       });
     }
 
@@ -530,6 +542,7 @@ module.exports = async function (app, options) {
         url: `/${entity}/website-read`,
         handler: SiteSettingController.getWebsiteSiteSetting,
         preValidation: null,
+        ...useCache(300),
       });
     }
 
@@ -541,12 +554,14 @@ module.exports = async function (app, options) {
           url: `/faqs/website-list`,
           handler: FaqController.getWebsiteFaqs,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: FaqController.getWebsiteFaqs,
           preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -559,12 +574,14 @@ module.exports = async function (app, options) {
           url: `/${entity}/website-read`,
           handler: HeroController.getWebsiteHero,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/heroes/website-read`,
           handler: HeroController.getWebsiteHero,
           preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -577,24 +594,28 @@ module.exports = async function (app, options) {
           url: `/${entity}/website-list`,
           handler: CategoryController.getWebsiteCategories,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/categories/website-list`,
           handler: CategoryController.getWebsiteCategories,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-read`,
           handler: CategoryController.getWebsiteCategoryBySlug,
           preValidation: null,
+          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-tree`,
           handler: CategoryController.getWebsiteCategoryTree,
           preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -648,7 +669,7 @@ module.exports = async function (app, options) {
       );
     }
 
-    // REGISTER ALL ROUTES WITH FASTIFY
+    // REGISTER ALL ROUTES WITH FASTIFY WITH GLOBAL AUTOMATIC REDIS CACHING
     for (const routeOpts of routes) {
       const routeConfig = {
         method: routeOpts.method,
@@ -663,11 +684,51 @@ module.exports = async function (app, options) {
             });
           }
         },
+        preValidation: undefined,
+        preHandler: undefined,
+        onSend: undefined,
       };
 
       if (routeOpts.preValidation) {
         routeConfig.preValidation = routeOpts.preValidation;
       }
+
+      // 1. Automatically attach Redis caching to ALL GET requests across the entire application
+      const customPreHandler = routeOpts["preHandler"];
+      const customOnSend = routeOpts["onSend"];
+
+      if (routeOpts.method === "GET") {
+        const cacheHooks = useCache(300);
+        routeConfig.preHandler = customPreHandler
+          ? Array.isArray(customPreHandler)
+            ? [...customPreHandler, cacheHooks.preHandler]
+            : [customPreHandler, cacheHooks.preHandler]
+          : cacheHooks.preHandler;
+        routeConfig.onSend = cacheHooks.onSend;
+      } else {
+        if (customPreHandler) {
+          routeConfig.preHandler = customPreHandler;
+        }
+        if (customOnSend) {
+          routeConfig.onSend = customOnSend;
+        }
+      }
+
+      // 2. Automatically invalidate cache on successful write mutations (POST, PUT, PATCH, DELETE)
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(routeOpts.method)) {
+        const originalOnSend = routeConfig.onSend;
+        routeConfig.onSend = async (request, reply, payload) => {
+          if (reply.statusCode >= 200 && reply.statusCode < 300) {
+            const { clearAllCache } = require("../middleware/cache.middleware");
+            clearAllCache();
+          }
+          if (originalOnSend) {
+            return originalOnSend(request, reply, payload);
+          }
+          return payload;
+        };
+      }
+
       app.route(routeConfig);
     }
   }

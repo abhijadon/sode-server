@@ -7,7 +7,7 @@
   "private": true,
   "scripts": {
     "dev": "nodemon",
-    "start": "bun src/server.js",
+    "start": "node src/server.js",
     "test": "echo \"No tests configured\""
   },
   "keywords": [
