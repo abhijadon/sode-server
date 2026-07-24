@@ -35,7 +35,7 @@ async function updateMediaUrlsInDatabase() {
 
     // Helper to find MinIO URL for a local path or filename (with fuzzy extension matching)
     function getMinioUrl(pathStr) {
-      if (!pathStr || pathStr.startsWith("http://") || pathStr.startsWith("https://")) {
+      if (!pathStr || typeof pathStr !== "string" || pathStr.startsWith("http://") || pathStr.startsWith("https://")) {
         return pathStr;
       }
       const rawBase = pathStr.split("/").pop().toLowerCase();

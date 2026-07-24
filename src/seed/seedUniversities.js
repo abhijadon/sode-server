@@ -5,7 +5,7 @@ require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
 const { University } = require("../model/University");
 const { PartnerUniversity } = require("../model/PartnerUniversity");
-const { Course } = require("../model/Course");
+const { Category } = require("../model/Category");
 const { Media } = require("../model/Media");
 
 const MONGODB_URI =
@@ -28,8 +28,8 @@ async function findOrCreateMedia(url, defaultName = "Media Asset") {
     const mimeType = fileName.endsWith(".png")
       ? "image/png"
       : fileName.endsWith(".webp")
-      ? "image/webp"
-      : "image/jpeg";
+        ? "image/webp"
+        : "image/jpeg";
 
     media = await Media.create({
       name: defaultName || fileName,
@@ -46,424 +46,88 @@ async function findOrCreateMedia(url, defaultName = "Media Asset") {
   return media._id;
 }
 
-const universitiesData = [
-  {
-    name: "Rushford Business School",
-    slug: "rushford-business-school",
-    logoSrc: "/assets/images/rushford-logo.jpg",
-    imageSrc: "/assets/images/rushford-image.png",
-    courses: ["Rushford DBA"],
-    brochureUrl: "/assets/pdf/rushford_main_brochure.pdf",
-    paragraphs: [
-      "Rushford Business School is a globally recognised institute having 5 star QS rating, AACSB-accredited and an active member of ACBSP (Accreditation Council for Business Schools and Programs ). This institution offers flexible and accessible executive leadership education for working professionals, providing them with the expertise for C-suite roles.",
-      "Rushford DBA program is designed for senior managers, entrepreneurs, and consultants looking to strengthen their proficiency in business research, innovation, and strategic leadership. It is an eduQua-certified business school located in Switzerland.",
-      "The program emphasises global business challenges. It is equipped with evidence-based decision-making and leadership transformation skillset. Overall, it helps learners prepare for executive and board-level responsibilities in an increasingly digital and AI-powered business environment.",
-    ],
-    order: 1,
-    featured: true,
-  },
-  {
-    name: "Golden Gate University",
-    slug: "golden-gate-university",
-    logoSrc: "/assets/images/ggu-logo.jpg",
-    imageSrc: "/assets/images/ggu-image.png",
-    courses: ["Online DBA", "Online MBA"],
-    brochureUrl: "/assets/pdf/ggu_main_brochure.pdf",
-    paragraphs: [
-      "Golden Gate University is a respected institution which is located in San Francisco, California. The university is WES recognised and AACSB accredited, therefore is known worldwide for its strong industry orientation and practitioner-led business education. Over the span, the university has been a pioneering institute for several professional enterprise executive education programs.",
-      "This university offers an Online DBA designed for experienced professionals seeking research expertise and leadership capabilities. The university curates an advanced Online MBA focused on strategic management and global business practices.",
-      "The programs Golden Gate MBA and Golden Gate University Online DBA are particularly suitable for learners who are searching for executive management programs. The flexible learning formats, U.S. faculty with Fortune 500 experiences and a curriculum aligned with executive leadership requirements, Golden Gate Admissions supports executives aiming for senior management and C-suite roles.",
-    ],
-    order: 2,
-    featured: true,
-  },
-  {
-    name: "SSBM Geneva",
-    slug: "ssbm-geneva",
-    logoSrc: "/assets/images/ssbm-logo.jpg",
-    imageSrc: "/assets/images/ssbm-image.png",
-    courses: ["Online DBA"],
-    brochureUrl: "/assets/pdf/ssbm_main_brochure.pdf",
-    paragraphs: [
-      "The Swiss School of Business and Management (SSBM), based in Geneva, Switzerland, is known for its modern and internationally focused executive education. The university holds a membership of  AAACSB and is accredited by top British, Swiss and U.S agencies, making it globally recognised.",
-      "SSBM Online DBA program is designed specifically for working professionals and business leaders seeking doctoral-level expertise without interrupting their careers.",
-      "SSBM's doctorate program curates a strong global business perspective and flexible online delivery. SSBM prepares learners to address real-world business challenges and lead organisational transformation. The elite educational program is particularly attractive to professionals targeting senior leadership and advisory positions.",
-    ],
-    order: 3,
-    featured: true,
-  },
-  {
-    name: "ESGCI",
-    slug: "esgci",
-    logoSrc: "/assets/images/esgci-logo.jpg",
-    imageSrc: "/assets/images/esgci-image.png",
-    courses: ["Online DBA"],
-    brochureUrl: "/assets/pdf/esgci_main_brochure.pdf",
-    paragraphs: [
-      "The university is based in Paris, France. ESGCI is a recognised business school known for delivering a high-end career-oriented management education, which has been recognised under the French Ministry of Higher Education, offering it with an excellence in a global outlook.",
-      "ESGCI Online DBA is a fast-track program tailored for experienced professionals seeking advanced business knowledge while continuing their careers.",
-      "The flexible learning pathways and a global perspective, ESGCI's doctorate supports executives aspiring to contribute to business thought leadership, solve complex organisational challenges and be independent veterans.",
-    ],
-    order: 4,
-    featured: false,
-  },
-  {
-    name: "Edgewood University",
-    slug: "edgewood-university",
-    logoSrc: "/assets/images/edgewood-logo.jpg",
-    imageSrc: "/assets/images/edgewood-image.png",
-    courses: ["Online DBA", "MBA + DBA"],
-    brochureUrl: "/assets/pdf/edgewood_main_brochure.pdf",
-    paragraphs: [
-      "Edgewood is a globally recognised university located in Madison, Wisconsin. The university is one of the top institutions that holds accreditations from ACBSP and HL and is WES recognised, offering an edge to its programs through its learner-centric approach and emphasis on leadership development.",
-      "The institution offers both an Online DBA and an integrated MBA + DBA pathway for ambitious professionals who seek accelerated career progression. These programs combine managerial knowledge with doctoral research capabilities, enabling learners to develop expertise in strategy, innovation, and organisational leadership.",
-      "The flexible structure and global excellence make this institution particularly appealing to executives pursuing long-term leadership ambitions.",
-    ],
-    order: 5,
-    featured: true,
-  },
-  {
-    name: "Liverpool Business School",
-    slug: "liverpool-business-school",
-    logoSrc: "/assets/images/liverpool-logo.png",
-    imageSrc: "/assets/images/liverpool-image.png",
-    courses: ["MBA Online"],
-    brochureUrl: "/assets/pdf/liverpool_main_brochure.pdf",
-    paragraphs: [
-      "Liverpool Business School is part of a prestigious UK university ecosystem and delivers globally recognised management education with a strong focus on leadership and employability. This institute is under Liverpool John Moores University and is known for its 30+ years of excellence in business education.",
-      "Liverpool Online Courses are the most sought-after options for professionals who seek an opportunity to have a global outlook and elite enterprise educational programs.",
-      "The Liverpool MBA Online program is recognised by the World Education Services (WES) and is AACSB-accredited, equipping students with deep knowledge in Finance and Management. The flexible online learning format and international faculty make the program ideal for aspiring managers and business leaders, executives who are all aiming to strengthen their decision-making capabilities.",
-    ],
-    order: 6,
-    featured: true,
-  },
-  {
-    name: "IIIT Bangalore",
-    slug: "iiit-bangalore",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: [
-      "Data Science",
-      "CTO Leader Program",
-      "Generative AI",
-      "Artificial Intelligence",
-      "Agentic AI",
-      "Machine Learning",
-    ],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "IIIT Bangalore is a premier institute in India that is known for its executive management certification course. It is a technology-focused institution holding NAAC accreditation and is widely respected for its industry-aligned executive education.",
-      "The institute offers a range of programs and IIIT Certification, including the Executive Programme in Generative AI for Leaders, Executive Post Graduate Certificate Programme in Data Science & AI, and AI leadership programs. The IIIT Bangalore Online programs combine technical expertise with leadership development. It guides professionals in building capabilities in AI, machine learning, agentic AI, and digital transformation for future leadership roles.",
-    ],
-    order: 7,
-    featured: true,
-  },
-  {
-    name: "IIM Kozhikode",
-    slug: "iim-kozhikode",
-    logoSrc: "/assets/images/iim-logo.jpg",
-    imageSrc: "/assets/images/iim-image.png",
-    courses: [
-      "Professional Certificate Programme in HR Management and Analytics",
-      "Executive Program in Business Management & Digital Innovation",
-    ],
-    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
-    paragraphs: [
-      "IIM Kozhikode is located in Kerala. It is one of India's leading management institutes and is widely recognised for its academic excellence and executive education initiatives. The institute offers the Professional Certificate Programme in HR Management and Analytics, combining people management with data-driven decision-making capabilities.",
-      "This IIM Executive Program is highly relevant for HR professionals searching for, IIM Executive Education opportunities to enhance their abilities for workforce management. Profess through IIM Kozhikode Online, gain expertise in workforce analytics, talent strategy, and organisational effectiveness, preparing them for modern HR leadership roles in digitally transforming organisations.",
-    ],
-    order: 8,
-    featured: true,
-  },
-  {
-    name: "Liverpool John Moores University",
-    slug: "liverpool-john-moores-university",
-    logoSrc: "/assets/images/ljmu-logo.png",
-    imageSrc: "/assets/images/liverpool-image.png",
-    courses: ["LJMU MSc", "LJMU MBA"],
-    brochureUrl: "/assets/pdf/liverpool_main_brochure.pdf",
-    paragraphs: [
-      "Liverpool John Moores University (LJMU) is a reputed university in the UK which known for its excellence in executive leadership programs. The university holds prestigious recognitions accreditations, including WES (World Education Services), AACSB (Association to Advance Collegiate Schools of Business), and Privy Council Accreditation, reinforcing the global acceptance and credibility of its qualifications.",
-      "It offers a lot of future-focused programmes, such as a Masters in Data Science and a Masters in Machine Learning and AI. These are tailored to equip professionals with advanced analytical, AI, and technological capabilities. LJMU combines academic rigour with practical learning to prepare leaders for the digital economy.",
-    ],
-    order: 9,
-    featured: false,
-  },
-  {
-    name: "MICA",
-    slug: "mica",
-    logoSrc: "/assets/images/mica-logo.jpg",
-    imageSrc: "/assets/images/mica-image.png",
-    courses: [
-      "Digital Marketing",
-      "SEO & SEM",
-      "Brand Communication",
-      "Social Media",
-    ],
-    brochureUrl: "/assets/pdf/mica_main_brochure.pdf",
-    paragraphs: [
-      "MICA is one of India's premier institutions, established in 1991 at Ahmedabad, Gujarat . The institute specialises in strategic marketing, branding, and communications educational programs and certifications.",
-      "The institute offers the Advanced Certificate in Digital Marketing & Communication and the Advanced Certificate in Digital Brand Communication Strategy. Through MICA Admissions, Professionals learn MICA Digital Marketing Programs. The executive management programs are tailored to consumer behaviour, performance marketing, brand strategy, and digital communication. This enables learners to build expertise in modern marketing leadership and customer engagement strategies in a digital-first economy.",
-    ],
-    order: 10,
-    featured: true,
-  },
-  {
-    name: "Subharti University",
-    slug: "subharti-university",
-    logoSrc: "/assets/images/subharti-logo.jpg",
-    imageSrc: "/assets/images/subharti-image.jpg",
-    courses: ["Online MBA", "Online BBA", "Online BA", "Online MA"],
-    brochureUrl: "/assets/pdf/subharti_brochure.pdf",
-    location: "Meerut, UP, India",
-    established: "2008",
-    approvals: ["UGC-DEB Approved", "NAAC A Grade", "AICTE"],
-    rating: 4.5,
-    reviewsCount: 845,
-    examMode: "Online / Assignment-Based",
-    emiStarts: "₹2,999/month",
-    paragraphs: [
-      "Swami Vivekanand Subharti University is a top State Private University offering high-quality distance education courses approved by UGC-DEB.",
-      "The university focuses on making higher education flexible, affordable, and accessible for working professionals across India.",
-    ],
-    order: 11,
-    featured: true,
-  },
-  {
-    name: "Mangalayatan University",
-    slug: "mangalayatan-university",
-    logoSrc: "/assets/images/mangalayatan-logo.jpg",
-    imageSrc: "/assets/images/mangalayatan-image.jpg",
-    courses: ["Online MCA", "Online BCA", "Online MBA"],
-    brochureUrl: "/assets/pdf/mangalayatan_brochure.pdf",
-    location: "Aligarh, UP, India",
-    established: "2006",
-    approvals: ["UGC-DEB Approved", "NAAC A+ Grade", "AICTE"],
-    rating: 4.6,
-    reviewsCount: 620,
-    examMode: "100% Online",
-    emiStarts: "₹3,499/month",
-    paragraphs: [
-      "Mangalayatan University is a premier NAAC A+ accredited institution offering career-oriented online degree programs.",
-      "Programs are designed with academic flexibility and industry-relevant syllabus for modern working professionals.",
-    ],
-    order: 12,
-    featured: true,
-  },
-  {
-    name: "IIM Ahmedabad",
-    slug: "iim-ahmedabad",
-    logoSrc: "/assets/images/iim-logo.jpg",
-    imageSrc: "/assets/images/iim-image.png",
-    courses: ["Executive General Management Program (EGMP)"],
-    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Management Ahmedabad (IIMA) is a world-renowned business school located in Gujarat, India.",
-      "It offers specialized executive general management programs for mid-to-senior managers looking to scale business operations and lead strategy."
-    ],
-    order: 13,
-    featured: true,
-  },
-  {
-    name: "IIM Bangalore",
-    slug: "iim-bangalore",
-    logoSrc: "/assets/images/iim-logo.jpg",
-    imageSrc: "/assets/images/iim-image.png",
-    courses: ["Advanced Program in Digital Transformation & AI Strategy"],
-    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Management Bangalore (IIMB) is a premier management institute known for its advanced research and industry-relevant curriculum.",
-      "The digital transformation and AI strategy course empowers tech leaders to navigate business disruptions."
-    ],
-    order: 14,
-    featured: true,
-  },
-  {
-    name: "IIM Calcutta",
-    slug: "iim-calcutta",
-    logoSrc: "/assets/images/iim-logo.jpg",
-    imageSrc: "/assets/images/iim-image.png",
-    courses: ["Executive Program in Growth Strategies & Corporate Finance"],
-    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Management Calcutta (IIMC) is renowned globally for its quantitative finance and strategic management programs.",
-      "The growth strategy and corporate finance program offers corporate scaling capabilities to finance executives."
-    ],
-    order: 15,
-    featured: true,
-  },
-  {
-    name: "IIM Lucknow",
-    slug: "iim-lucknow",
-    logoSrc: "/assets/images/iim-logo.jpg",
-    imageSrc: "/assets/images/iim-image.png",
-    courses: ["Executive Program in Strategic Management & Leadership"],
-    brochureUrl: "/assets/pdf/iim_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Management Lucknow (IIML) prepares corporate professionals for senior leadership and competitive strategy formulation.",
-      "Its strategic management programs are highly sought-after in corporate leadership ecosystems."
-    ],
-    order: 16,
-    featured: true,
-  },
-  {
-    name: "IIT Delhi",
-    slug: "iit-delhi",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: ["Executive Certification in Data Science & Machine Learning"],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Technology Delhi (IITD) is a globally recognized research institution at the forefront of technical education.",
-      "The data science and machine learning executive certification delivers advanced theoretical and practical mathematical model-building capabilities."
-    ],
-    order: 17,
-    featured: true,
-  },
-  {
-    name: "IIT Bombay",
-    slug: "iit-bombay",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: ["Executive Certification in AI, Machine Learning & Cloud Computing"],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Technology Bombay (IITB) provides tech professionals with rigorous cloud and deep learning skillsets.",
-      "The AI and machine learning program explores production-ready neural models and data pipelines."
-    ],
-    order: 18,
-    featured: true,
-  },
-  {
-    name: "IIT Madras",
-    slug: "iit-madras",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: ["Executive Program in Data Science & Engineering Analytics"],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Technology Madras (IITM) has consistently ranked as India's top engineering university.",
-      "Its data science and engineering analytics program provides industry professionals with data-driven decision-making toolkits."
-    ],
-    order: 19,
-    featured: true,
-  },
-  {
-    name: "IIT Kanpur",
-    slug: "iit-kanpur",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: ["Executive Program in Cybersecurity & Blockchain Technologies"],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Technology Kanpur (IITK) delivers ethical hacking, penetration testing, and security auditing skillsets.",
-      "The cybersecurity and blockchain program secures corporate networks and transactions against advanced persistent threats."
-    ],
-    order: 20,
-    featured: true,
-  },
-  {
-    name: "IIT Roorkee",
-    slug: "iit-roorkee",
-    logoSrc: "/assets/images/iiitb-logo.jpg",
-    imageSrc: "/assets/images/iiitb-image.png",
-    courses: ["Executive Program in Data Analytics & Applied Finance"],
-    brochureUrl: "/assets/pdf/iiitb_main_brochure.pdf",
-    paragraphs: [
-      "Indian Institute of Technology Roorkee (IITR) is one of India's oldest and most prestigious engineering universities.",
-      "The data analytics and applied finance program bridges tech tools and corporate financial analytics."
-    ],
-    order: 21,
-    featured: true,
-  },
+// 🏛️ Clean list of 18 Universities/Institutes mapped with Category Slugs
+const cleanUniversitiesList = [
+  { name: "Edgewood University", slug: "edgewood-university", catSlug: "list-of-global-universities", logoSrc: "/assets/images/edgewood-logo.jpg" },
+  { name: "ESGCI, Paris", slug: "esgci-paris", catSlug: "list-of-global-universities", logoSrc: "/assets/images/esgci-logo.jpg" },
+  { name: "Rushford Business School", slug: "rushford-business-school", catSlug: "list-of-global-universities", logoSrc: "/assets/images/rushford-logo.jpg" },
+  { name: "Golden Gate University", slug: "golden-gate-university", catSlug: "list-of-global-universities", logoSrc: "/assets/images/ggu-logo.jpg" },
+  { name: "SSBM Geneva", slug: "ssbm-geneva", catSlug: "list-of-global-universities", logoSrc: "/assets/images/ssbm-logo.jpg" },
+  { name: "Liverpool Business School", slug: "liverpool-business-school", catSlug: "list-of-global-universities", logoSrc: "/assets/images/liverpool-logo.png" },
+  { name: "Paris School of Business", slug: "paris-school-of-business", catSlug: "list-of-global-universities", logoSrc: "/assets/images/esgci-logo.jpg" },
+  { name: "IIT Roorkee", slug: "iit-roorkee", catSlug: "list-of-iit", logoSrc: "/assets/images/iiitb-logo.jpg" },
+  { name: "IIT Delhi", slug: "iit-delhi", catSlug: "list-of-iit", logoSrc: "/assets/images/iiitb-logo.jpg" },
+  { name: "IIT Madras", slug: "iit-madras", catSlug: "list-of-iit", logoSrc: "/assets/images/iiitb-logo.jpg" },
+  { name: "IIM Kozhikode", slug: "iim-kozhikode", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIM Bangalore", slug: "iim-bangalore", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIM Udaipur", slug: "iim-udaipur", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIM Lucknow", slug: "iim-lucknow", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIM Nagpur", slug: "iim-nagpur", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIM Indore", slug: "iim-indore", catSlug: "list-of-iim", logoSrc: "/assets/images/iim-logo.jpg" },
+  { name: "IIIT Bangalore", slug: "iiit-bangalore", catSlug: "other", logoSrc: "/assets/images/iiitb-logo.jpg" },
+  { name: "XLRI Jamshedpur", slug: "xlri-jamshedpur", catSlug: "other", logoSrc: "/assets/images/iim-logo.jpg" },
 ];
 
-async function seedUniversitiesAndPartners() {
+async function seedCleanUniversities() {
   try {
-    console.log("🍃 Connecting to MongoDB...");
+    console.log("🚀 Connecting to MongoDB...");
     await mongoose.connect(MONGODB_URI);
+    console.log("🍃 MongoDB connected successfully.");
 
-    console.log("🧹 Dropping partneruniversities indexes & clearing old fields...");
+    console.log("🧹 Clearing old University & PartnerUniversity collections...");
+    try {
+      await mongoose.connection.db.collection("universities").dropIndexes();
+    } catch (e) { }
     try {
       await mongoose.connection.db.collection("partneruniversities").dropIndexes();
-    } catch (e) {}
+    } catch (e) { }
 
-    await PartnerUniversity.deleteMany({});
-    console.log("🗑️ Cleaned up partneruniversities collection.");
+    const resUni = await University.deleteMany({});
+    const resPartnerUni = await PartnerUniversity.deleteMany({});
 
-    for (const item of universitiesData) {
+    console.log(`🗑️ Deleted ${resUni.deletedCount} items from University model.`);
+    console.log(`🗑️ Deleted ${resPartnerUni.deletedCount} items from PartnerUniversity model.`);
+    console.log("✨ University & PartnerUniversity models are clean!");
+
+    const categories = await Category.find({});
+    const catMap = new Map();
+    categories.forEach((c) => catMap.set(c.slug, c._id));
+
+    let order = 1;
+    for (const item of cleanUniversitiesList) {
       const logoMediaId = await findOrCreateMedia(item.logoSrc, `${item.name} Logo`);
-      const imageMediaId = await findOrCreateMedia(item.imageSrc, `${item.name} Image`);
+      const catId = catMap.get(item.catSlug) || catMap.get(item.catSlug.replace("list-of-", "")) || null;
 
-      // 1️⃣ Upsert in University model (ONLY clean fields: name, slug, logoSrc, imageSrc, order, enabled)
-      const uniDoc = await University.findOneAndUpdate(
-        { slug: item.slug },
-        {
-          $set: {
-            name: item.name,
-            slug: item.slug,
-            logoSrc: logoMediaId,
-            imageSrc: imageMediaId,
-            order: item.order,
-            enabled: true,
-          },
-        },
-        { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
-      );
-
-      // Resolve Course ObjectIds from master Course collection
-      const courseObjectIds = [];
-      if (Array.isArray(item.courses) && item.courses.length > 0) {
-        for (const courseTitle of item.courses) {
-          const cleanSlug = courseTitle
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, "-")
-            .replace(/^-|-$/g, "");
-          let courseDoc = await Course.findOne({
-            $or: [
-              { title: new RegExp(`^${courseTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, "i") },
-              { slug: cleanSlug },
-            ],
-          });
-          if (!courseDoc) {
-            courseDoc = await Course.create({
-              title: courseTitle,
-              slug: cleanSlug,
-              enabled: true,
-            });
-          }
-          courseObjectIds.push(courseDoc._id);
-        }
-      }
-
-      // 2️⃣ Create in PartnerUniversity model (strictly linked to University._id and Course._ids)
-      await PartnerUniversity.create({
-        university: uniDoc._id,
-        courses: courseObjectIds,
-        brochureUrl: item.brochureUrl,
-        paragraphs: item.paragraphs,
-        location: item.location || "India / Global",
-        established: item.established || "2000",
-        approvals: item.approvals || ["UGC", "DEB", "WES", "AICTE"],
-        rating: item.rating || 4.8,
-        reviewsCount: item.reviewsCount || 350,
-        examMode: item.examMode || "100% Online / Assignment-Based",
-        emiStarts: item.emiStarts || "₹4,999/month",
-        order: item.order,
-        featured: item.featured,
+      const uniDoc = await University.create({
+        name: item.name,
+        slug: item.slug,
+        logoSrc: logoMediaId,
+        category: catId,
+        categories: catId ? [catId] : [],
+        order: order,
         enabled: true,
       });
 
-      console.log(`✅ Synced Clean University & PartnerUniversity: ${item.name} (${uniDoc._id}) with ${courseObjectIds.length} course ObjectIds`);
+      await PartnerUniversity.create({
+        university: uniDoc._id,
+        category: catId,
+        categories: catId ? [catId] : [],
+        order: order,
+        featured: true,
+        enabled: true,
+      });
+
+      console.log(`✅ Seeded Clean University "${uniDoc.name}" (${uniDoc.slug}) | Cat: ${item.catSlug} -> ID: ${uniDoc._id}`);
+      order++;
     }
 
-    console.log("\n🎉 All universities and partner universities successfully cleaned and synced!");
+    console.log(`\n🎉 Successfully seeded ${cleanUniversitiesList.length} clean universities mapped with Category ObjectIds!`);
   } catch (error) {
-    console.error("❌ Error seeding universities:", error);
+    console.error("❌ Error in seedCleanUniversities:", error);
   } finally {
     await mongoose.disconnect();
     console.log("🔌 MongoDB disconnected.");
   }
 }
 
-seedUniversitiesAndPartners();
+seedCleanUniversities();

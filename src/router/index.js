@@ -467,6 +467,37 @@ module.exports = async function (app, options) {
           ...useCache(300),
         }
       );
+    } else if (entity === "partnercourse") {
+      routes.push(
+        {
+          method: "GET",
+          url: `/partnercourses/website-list`,
+          handler: CourseController.getWebsiteCourses,
+          preValidation: null,
+          ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-list`,
+          handler: CourseController.getWebsiteCourses,
+          preValidation: null,
+          ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/partnercourses/website-read`,
+          handler: CourseController.getWebsiteCourseBySlug,
+          preValidation: null,
+          ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/${entity}/website-read`,
+          handler: CourseController.getWebsiteCourseBySlug,
+          preValidation: null,
+          ...useCache(300),
+        }
+      );
     }
 
     // ✅ SPECIAL PUBLIC WEBSITE ROUTES FOR UNIVERSITIES & PARTNER UNIVERSITIES

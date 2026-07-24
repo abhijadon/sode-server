@@ -22,9 +22,16 @@ const subcourseSchema = new Schema(
     course: {
       type: Schema.Types.ObjectId,
       ref: "Course",
-      required: [true, "Parent course reference is required"],
+      default: null,
       index: true,
     },
+    courses: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Course",
+        index: true,
+      },
+    ],
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",
@@ -118,6 +125,7 @@ const subcourseSchema = new Schema(
 
 // High-performance compound indexes
 subcourseSchema.index({ course: 1, removed: 1, enabled: 1 });
+subcourseSchema.index({ courses: 1, removed: 1, enabled: 1 });
 subcourseSchema.index({ slug: 1, removed: 1 });
 
 const Subcourse = mongoose.model("Subcourse", subcourseSchema);

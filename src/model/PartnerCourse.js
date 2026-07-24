@@ -25,6 +25,24 @@ const partnerCourseSchema = new Schema(
       required: [true, "Course reference is required"],
       index: true,
     },
+    subcourse: {
+      type: Schema.Types.ObjectId,
+      ref: "Subcourse",
+      default: null,
+      index: true,
+    },
+    title: {
+      type: String,
+      default: null,
+      trim: true,
+    },
+    slug: {
+      type: String,
+      default: null,
+      lowercase: true,
+      trim: true,
+      index: true,
+    },
     category: {
       type: Schema.Types.ObjectId,
       ref: "Category",

@@ -19,24 +19,31 @@ async function getWebsiteCourses(request, reply) {
     let catIds = null;
 
     if (category && category !== "all") {
-      const foundCat = await Category.findOne({
+      const strippedSlug = category.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
+
+      const foundCats = await Category.find({
         removed: false,
         $or: [
           { slug: category },
+          { slug: strippedSlug },
+          { slug: `browse-${strippedSlug}` },
+          { slug: `certification-${strippedSlug}` },
+          { slug: `diploma-${strippedSlug}` },
+          { slug: `master-${strippedSlug}` },
+          { name: new RegExp(strippedSlug.replace(/-/g, " "), "i") },
           ...(mongoose.Types.ObjectId.isValid(category) ? [{ _id: category }] : []),
         ],
-      }).lean();
+      }).select("_id").lean();
 
-      if (foundCat) {
-        // Find all child categories belonging to this parent category
+      if (foundCats && foundCats.length > 0) {
+        const primaryCatIds = foundCats.map((c) => c._id);
         const childCats = await Category.find({
           removed: false,
-          parentId: foundCat._id,
+          parentId: { $in: primaryCatIds },
         }).select("_id").lean();
 
-        catIds = [foundCat._id, ...childCats.map((c) => c._id)];
+        catIds = [...primaryCatIds, ...childCats.map((c) => c._id)];
 
-        // Find courses with matching category or categories ObjectId
         const coursesWithCat = await Course.find({
           removed: false,
           $or: [
@@ -53,8 +60,11 @@ async function getWebsiteCourses(request, reply) {
           { course: { $in: matchedCatCourseIds } },
         ];
       } else {
-        // If category filter is passed but category is not found, return 0 results
-        partnerFilter._id = new mongoose.Types.ObjectId();
+        const sRegex = new RegExp(strippedSlug.replace(/-/g, " "), "i");
+        partnerFilter.$or = [
+          { title: sRegex },
+          { slug: new RegExp(category, "i") },
+        ];
       }
     }
 
@@ -132,8 +142,16 @@ async function getWebsiteCourses(request, reply) {
     // 4️⃣ Execute Mongoose Query on MongoDB PartnerCourse collection
     let partnerCourses = await PartnerCourse.find(partnerFilter)
       .populate({
+        path: "university",
+        select: "_id name slug logoSrc imageSrc location approvals rating reviews",
+        populate: [
+          { path: "logoSrc", select: "_id name url alt" },
+          { path: "imageSrc", select: "_id name url alt" },
+        ],
+      })
+      .populate({
         path: "course",
-        select: "_id title slug university logo image fee brochureUrl syllabus careers",
+        select: "_id title slug category logo image fee brochureUrl syllabus careers",
         populate: [
           {
             path: "university",
@@ -149,6 +167,10 @@ async function getWebsiteCourses(request, reply) {
         ],
       })
       .populate({
+        path: "subcourse",
+        select: "_id title slug course",
+      })
+      .populate({
         path: "category",
         select: "_id name slug type title description logo logoSrc image imageSrc order",
         populate: [
@@ -157,6 +179,7 @@ async function getWebsiteCourses(request, reply) {
           { path: "imageSrc", select: "_id name url alt" },
         ],
       })
+      .populate({ path: "fee", select: "_id title amount currency slug" })
       .populate({ path: "duration", select: "_id title slug months" })
       .populate({ path: "eligibility", select: "_id title slug" })
       .sort(mSort)
@@ -164,15 +187,24 @@ async function getWebsiteCourses(request, reply) {
 
     let programs = (partnerCourses || []).map((pc) => {
       const parentCourse = pc.course && typeof pc.course === "object" ? pc.course : {};
+      const uniObj =
+        pc.university && typeof pc.university === "object" && pc.university.name
+          ? pc.university
+          : parentCourse.university && typeof parentCourse.university === "object"
+          ? parentCourse.university
+          : null;
+
+      const feeObj = pc.fee || parentCourse.fee || null;
+
       return {
         ...pc,
         title: pc.title || parentCourse.title || "Course",
         slug: pc.slug || parentCourse.slug || "",
-        university: parentCourse.university || pc.university || null,
-        logo: parentCourse.logo || pc.logo || null,
-        image: parentCourse.image || pc.image || null,
-        fee: parentCourse.fee || pc.fee || null,
-        brochureUrl: parentCourse.brochureUrl || pc.brochureUrl || null,
+        university: uniObj,
+        logo: pc.logo || parentCourse.logo || (uniObj ? uniObj.logoSrc : null) || null,
+        image: pc.image || parentCourse.image || (uniObj ? uniObj.imageSrc : null) || null,
+        fee: feeObj,
+        brochureUrl: pc.brochureUrl || parentCourse.brochureUrl || null,
       };
     });
 
