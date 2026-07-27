@@ -20,6 +20,43 @@ function fixMediaUrl(mediaObj) {
   return null;
 }
 
+/**
+ * Helper — Normalize parentId (now an array of ObjectIds) into array of strings.
+ * Handles both old single-ObjectId (legacy docs) and new array format.
+ */
+function normalizeParentIds(parentId) {
+  if (!parentId) return [];
+  // Legacy: single ObjectId stored as object or string
+  if (!Array.isArray(parentId)) {
+    const id = typeof parentId === "object" ? String(parentId._id || parentId) : String(parentId);
+    return id ? [id] : [];
+  }
+  // New array format
+  return parentId
+    .filter(Boolean)
+    .map((p) => (typeof p === "object" ? String(p._id || p) : String(p)));
+}
+
+/**
+ * Helper — Normalize populated parentId array into array of {_id, name, slug} objects.
+ */
+function normalizePopulatedParents(parentId) {
+  if (!parentId) return [];
+  if (!Array.isArray(parentId)) {
+    if (typeof parentId === "object" && parentId !== null) {
+      return [{ _id: String(parentId._id), name: parentId.name, slug: parentId.slug, title: parentId.title }];
+    }
+    return [];
+  }
+  return parentId
+    .filter(Boolean)
+    .map((p) =>
+      typeof p === "object"
+        ? { _id: String(p._id), name: p.name, slug: p.slug, title: p.title }
+        : { _id: String(p) }
+    );
+}
+
 // 🎯 Fetch All Website Categories & Hierarchical Parent-Child Tree
 async function getWebsiteCategories(request, reply) {
   try {
@@ -35,22 +72,31 @@ async function getWebsiteCategories(request, reply) {
       .populate({ path: "parentId", select: "_id name slug title" })
       .lean();
 
-    const formattedCategories = (categories || []).map((cat) => ({
-      ...cat,
-      _id: String(cat._id),
-      parentId: cat.parentId ? (typeof cat.parentId === "object" ? String(cat.parentId._id) : String(cat.parentId)) : null,
-      parentSlug: cat.parentId && typeof cat.parentId === "object" ? cat.parentId.slug : null,
-      logo: fixMediaUrl(cat.logo),
-      logoSrc: fixMediaUrl(cat.logoSrc),
-      image: fixMediaUrl(cat.image),
-      imageSrc: fixMediaUrl(cat.imageSrc),
-    }));
+    const formattedCategories = (categories || []).map((cat) => {
+      const parentIds = normalizeParentIds(cat.parentId);
+      const parents = normalizePopulatedParents(cat.parentId);
+      return {
+        ...cat,
+        _id: String(cat._id),
+        // Array of parent IDs (strings)
+        parentId: parentIds,
+        // Array of parent slugs (for convenience)
+        parentSlugs: parents.map((p) => p.slug).filter(Boolean),
+        // Populated parent objects
+        parents,
+        logo: fixMediaUrl(cat.logo),
+        logoSrc: fixMediaUrl(cat.logoSrc),
+        image: fixMediaUrl(cat.image),
+        imageSrc: fixMediaUrl(cat.imageSrc),
+      };
+    });
 
     // Build Parent-Child Tree
-    const parents = formattedCategories.filter((cat) => !cat.parentId);
-    const tree = parents.map((parent) => {
+    // A category is a "root parent" if parentId array is empty
+    const roots = formattedCategories.filter((cat) => !cat.parentId || cat.parentId.length === 0);
+    const tree = roots.map((parent) => {
       const children = formattedCategories.filter(
-        (child) => child.parentId && String(child.parentId) === String(parent._id)
+        (child) => child.parentId && child.parentId.includes(String(parent._id))
       );
       return {
         ...parent,
@@ -104,9 +150,9 @@ async function getWebsiteCategoryBySlug(request, reply) {
       });
     }
 
-    // Find all subcategories where parentId === category._id
+    // Find all subcategories where parentId array contains category._id
     const childrenDocs = await Category.find({
-      parentId: category._id,
+      parentId: category._id,   // Mongoose $in semantics work for arrays automatically
       removed: false,
       enabled: true,
     })
@@ -117,10 +163,15 @@ async function getWebsiteCategoryBySlug(request, reply) {
       .populate({ path: "imageSrc", select: "_id name url alt" })
       .lean();
 
+    const parentIds = normalizeParentIds(category.parentId);
+    const parents = normalizePopulatedParents(category.parentId);
+
     const formattedCategory = {
       ...category,
       _id: String(category._id),
-      parentId: category.parentId ? (typeof category.parentId === "object" ? String(category.parentId._id) : String(category.parentId)) : null,
+      parentId: parentIds,
+      parentSlugs: parents.map((p) => p.slug).filter(Boolean),
+      parents,
       logo: fixMediaUrl(category.logo),
       logoSrc: fixMediaUrl(category.logoSrc),
       image: fixMediaUrl(category.image),
@@ -130,7 +181,7 @@ async function getWebsiteCategoryBySlug(request, reply) {
     const formattedChildren = (childrenDocs || []).map((child) => ({
       ...child,
       _id: String(child._id),
-      parentId: String(category._id),
+      parentId: [String(category._id)],
       logo: fixMediaUrl(child.logo),
       logoSrc: fixMediaUrl(child.logoSrc),
       image: fixMediaUrl(child.image),
@@ -158,8 +209,55 @@ async function getWebsiteCategoryTree(request, reply) {
   return getWebsiteCategories(request, reply);
 }
 
+// 🎯 Fetch Lightweight Public Category Filter Options
+async function getWebsiteCategoryOptions(request, reply) {
+  try {
+    const categories = await Category.find({
+      removed: false,
+      enabled: true,
+    })
+      .sort({ order: 1, name: 1 })
+      .select("_id name title slug logo logoSrc type parentId")
+      .populate({ path: "logo", select: "_id name url alt" })
+      .populate({ path: "logoSrc", select: "_id name url alt" })
+      .populate({ path: "parentId", select: "_id name slug" })
+      .lean();
+
+    const formattedCategories = (categories || []).map((cat) => {
+      const parentIds = normalizeParentIds(cat.parentId);
+      return {
+        _id: String(cat._id),
+        value: String(cat._id),
+        label: cat.title || cat.name,
+        name: cat.name,
+        title: cat.title,
+        slug: cat.slug,
+        type: cat.type,
+        // Array of parent IDs
+        parentId: parentIds,
+        isChild: parentIds.length > 0,
+        logo: fixMediaUrl(cat.logo || cat.logoSrc),
+      };
+    });
+
+    return reply.code(200).send({
+      success: true,
+      result: formattedCategories,
+      items: formattedCategories,
+      categories: formattedCategories,
+    });
+  } catch (error) {
+    console.error("Error in getWebsiteCategoryOptions:", error);
+    return reply.code(500).send({
+      success: false,
+      message: error.message || "Failed to fetch website category options",
+    });
+  }
+}
+
 module.exports = {
   getWebsiteCategories,
   getWebsiteCategoryBySlug,
   getWebsiteCategoryTree,
+  getWebsiteCategoryOptions
 };

@@ -79,6 +79,12 @@ const partnerCourseSchema = new Schema(
       default: null,
       index: true,
     },
+    tenant: {
+      type: Schema.Types.ObjectId,
+      ref: "Tenant",
+      default: null,
+      index: true,
+    },
     logo: {
       type: Schema.Types.ObjectId,
       ref: "Media",

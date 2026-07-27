@@ -28,7 +28,7 @@ const master75Rows = [
   { rootCat: "Global Universities", uniName: "Edgewood University", degreeLevel: "Doctorate", courseTitle: "DBA - Leadership", domainCat: "Leadership", feeAmount: 950002, durationStr: "26 months" },
   { rootCat: "Global Universities", uniName: "Edgewood University", degreeLevel: "Master + Doctorate (Dual)", courseTitle: "MBA + DBA - Finance", domainCat: "Finance", feeAmount: 1170000, durationStr: "30 months" },
   { rootCat: "Global Universities", uniName: "Edgewood University", degreeLevel: "Master + Doctorate (Dual)", courseTitle: "MBA + DBA - Leadership", domainCat: "Leadership", feeAmount: 1170000, durationStr: "30 months" },
-  { rootCat: "Global Universities", uniName: "ESGCI, Paris", degreeLevel: "Doctorate", courseTitle: "Online DBA (Doctor of Business Administration)", domainCat: "Management", feeAmount: 715000, durationStr: "24 months" },
+  { rootCat: "Global Universities", uniName: "ESGCI", degreeLevel: "Doctorate", courseTitle: "Online DBA (Doctor of Business Administration)", domainCat: "Management", feeAmount: 715000, durationStr: "24 months" },
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - General", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - International Business", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Healthcare Management", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
@@ -131,7 +131,7 @@ async function seedPartnerCoursesMaster() {
     console.log("🧹 Clearing old PartnerCourse collection...");
     try {
       await mongoose.connection.db.collection("partnercourses").dropIndexes();
-    } catch (e) {}
+    } catch (e) { }
 
     const resPartner = await PartnerCourse.deleteMany({});
     console.log(`🗑️ Deleted ${resPartner.deletedCount} items from PartnerCourse model.`);

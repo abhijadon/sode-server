@@ -40,9 +40,11 @@ const categorySchema = new Schema(
       index: true,
     },
     parentId: {
-      type: Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
+      type: [{
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+      }],
+      default: [],
       index: true,
     },
     title: {
@@ -117,7 +119,7 @@ const categorySchema = new Schema(
 // High-performance compound indexes
 categorySchema.index({ type: 1, removed: 1, enabled: 1 });
 categorySchema.index({ slug: 1, removed: 1 });
-categorySchema.index({ parentId: 1, removed: 1 });
+categorySchema.index({ "parentId": 1, removed: 1 });
 
 const Category = mongoose.model("Category", categorySchema);
 

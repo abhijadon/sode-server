@@ -275,6 +275,24 @@ const completeSidebarItems = [
     path: "/admin-dashboard/appearance",
     enabled: true,
   },
+  {
+    title: "API Configuration",
+    section: "Settings",
+    sectionOrder: 5,
+    itemOrder: 5,
+    icon: { name: "Sliders", library: "lucide" },
+    path: "/admin-dashboard/api-config",
+    enabled: true,
+  },
+  {
+    title: "API Logs",
+    section: "Settings",
+    sectionOrder: 5,
+    itemOrder: 6,
+    icon: { name: "Activity", library: "lucide" },
+    path: "/admin-dashboard/api-logs",
+    enabled: true,
+  },
 ];
 
 async function seedAllSidebarItems() {

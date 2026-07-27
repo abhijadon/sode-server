@@ -1,218 +1,29 @@
 "use strict";
 
-const mongoose = require("mongoose");
-const { Course } = require("../../model/Course");
+/**
+ * course.controller.js
+ *
+ * Handlers that rely on `request.courseFilter` being populated by
+ * the `buildCourseFilter` preHandler middleware (course.filter.js).
+ *
+ * Route setup example:
+ *   fastify.get("/website-list", {
+ *     preHandler: buildCourseFilter,
+ *     handler: getWebsiteCourses,
+ *   });
+ */
+
 const { PartnerCourse } = require("../../model/PartnerCourse");
-const { Category } = require("../../model/Category");
-const { University } = require("../../model/University");
-const { Duration } = require("../../model/Duration");
 
 async function getWebsiteCourses(request, reply) {
   try {
-    const { search, category, university, course, duration, sort, limit, page } = request.query || {};
+    const { partnerFilter, mSort, pageNum, limitNum, skipNum } =
+      request.courseFilter;
 
-    // 1️⃣ Mongoose Category Query
-    // Mongoose Filter Builder for PartnerCourse Collection
-    const partnerFilter = { removed: false, enabled: true };
-
-    // 1. Mongoose Category Filter (Hierarchical parent & child category matching)
-    let catIds = null;
-
-    if (category && category !== "all") {
-      const strippedSlug = category.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
-
-      const foundCats = await Category.find({
-        removed: false,
-        $or: [
-          { slug: category },
-          { slug: strippedSlug },
-          { slug: `browse-${strippedSlug}` },
-          { slug: `certification-${strippedSlug}` },
-          { slug: `diploma-${strippedSlug}` },
-          { slug: `master-${strippedSlug}` },
-          { name: new RegExp(strippedSlug.replace(/-/g, " "), "i") },
-          ...(mongoose.Types.ObjectId.isValid(category) ? [{ _id: category }] : []),
-        ],
-      }).select("_id").lean();
-
-      if (foundCats && foundCats.length > 0) {
-        const primaryCatIds = foundCats.map((c) => c._id);
-        const childCats = await Category.find({
-          removed: false,
-          parentId: { $in: primaryCatIds },
-        }).select("_id").lean();
-
-        catIds = [...primaryCatIds, ...childCats.map((c) => c._id)];
-
-        const coursesWithCat = await Course.find({
-          removed: false,
-          $or: [
-            { category: { $in: catIds } },
-            { categories: { $in: catIds } },
-          ],
-        }).select("_id").lean();
-
-        const matchedCatCourseIds = coursesWithCat.map((c) => c._id);
-
-        partnerFilter.$or = [
-          { category: { $in: catIds } },
-          { categories: { $in: catIds } },
-          { course: { $in: matchedCatCourseIds } },
-        ];
-      } else {
-        const sRegex = new RegExp(strippedSlug.replace(/-/g, " "), "i");
-        partnerFilter.$or = [
-          { title: sRegex },
-          { slug: new RegExp(category, "i") },
-        ];
-      }
-    }
-
-    // 2. Mongoose Duration Filter (Lookup Duration documents in MongoDB)
-    if (duration && duration !== "all") {
-      const durationDocs = await Duration.find({
-        removed: false,
-        $or: [
-          { slug: duration },
-          { title: new RegExp(duration.replace("-year", ""), "i") },
-        ],
-      }).select("_id").lean();
-
-      if (durationDocs && durationDocs.length > 0) {
-        partnerFilter.duration = { $in: durationDocs.map((d) => d._id) };
-      }
-    }
-
-    // 3. Mongoose Course & University Filter Query
-    let hasCourseFilters = false;
-    const courseMatch = { removed: false, enabled: true };
-    if (catIds && catIds.length > 0) {
-      courseMatch.$or = [
-        { category: { $in: catIds } },
-        { categories: { $in: catIds } },
-      ];
-    }
-
-    if (university && university !== "all") {
-      hasCourseFilters = true;
-      const uSlugs = String(university).split(",").map((u) => u.trim());
-      const uniDocs = await University.find({
-        removed: false,
-        $or: [
-          { slug: { $in: uSlugs } },
-          { name: { $in: uSlugs.map((s) => new RegExp(s, "i")) } },
-        ],
-      }).select("_id").lean();
-
-      if (uniDocs && uniDocs.length > 0) {
-        courseMatch.university = { $in: uniDocs.map((u) => u._id) };
-      }
-    }
-
-    if (course && course !== "all") {
-      hasCourseFilters = true;
-      const cTitles = String(course).split(",").map((c) => c.trim());
-      courseMatch.$or = [
-        { title: { $in: cTitles.map((t) => new RegExp(`^${t}$`, "i")) } },
-        { slug: { $in: cTitles } },
-      ];
-    }
-
-    if (search && search.trim().length > 0) {
-      hasCourseFilters = true;
-      const sRegex = new RegExp(search.trim(), "i");
-      courseMatch.$or = [
-        { title: sRegex },
-        { description: sRegex },
-      ];
-    }
-
-    if (hasCourseFilters) {
-      const matchedCourseDocs = await Course.find(courseMatch).select("_id").lean();
-      const matchedCourseIds = matchedCourseDocs.map((c) => c._id);
-      partnerFilter.course = { $in: matchedCourseIds };
-    }
-
-    // Mongoose Sorting Options
-    let mSort = { order: 1, createdAt: -1 };
-    if (sort === "featured") {
-      mSort = { featured: -1, order: 1 };
-    }
-
-    // 4️⃣ Execute Mongoose Query on MongoDB PartnerCourse collection
-    let partnerCourses = await PartnerCourse.find(partnerFilter)
-      .populate({
-        path: "university",
-        select: "_id name slug logoSrc imageSrc location approvals rating reviews",
-        populate: [
-          { path: "logoSrc", select: "_id name url alt" },
-          { path: "imageSrc", select: "_id name url alt" },
-        ],
-      })
-      .populate({
-        path: "course",
-        select: "_id title slug category logo image fee brochureUrl syllabus careers",
-        populate: [
-          {
-            path: "university",
-            select: "_id name slug logoSrc imageSrc location approvals rating reviews",
-            populate: [
-              { path: "logoSrc", select: "_id name url alt" },
-              { path: "imageSrc", select: "_id name url alt" },
-            ],
-          },
-          { path: "logo", select: "_id name url alt" },
-          { path: "image", select: "_id name url alt" },
-          { path: "fee", select: "_id title amount currency slug" },
-        ],
-      })
-      .populate({
-        path: "subcourse",
-        select: "_id title slug course",
-      })
-      .populate({
-        path: "category",
-        select: "_id name slug type title description logo logoSrc image imageSrc order",
-        populate: [
-          { path: "logo", select: "_id name url alt" },
-          { path: "logoSrc", select: "_id name url alt" },
-          { path: "imageSrc", select: "_id name url alt" },
-        ],
-      })
-      .populate({ path: "fee", select: "_id title amount currency slug" })
-      .populate({ path: "duration", select: "_id title slug months" })
-      .populate({ path: "eligibility", select: "_id title slug" })
-      .sort(mSort)
-      .lean();
-
-    let programs = (partnerCourses || []).map((pc) => {
-      const parentCourse = pc.course && typeof pc.course === "object" ? pc.course : {};
-      const uniObj =
-        pc.university && typeof pc.university === "object" && pc.university.name
-          ? pc.university
-          : parentCourse.university && typeof parentCourse.university === "object"
-          ? parentCourse.university
-          : null;
-
-      const feeObj = pc.fee || parentCourse.fee || null;
-
-      return {
-        ...pc,
-        title: pc.title || parentCourse.title || "Course",
-        slug: pc.slug || parentCourse.slug || "",
-        university: uniObj,
-        logo: pc.logo || parentCourse.logo || (uniObj ? uniObj.logoSrc : null) || null,
-        image: pc.image || parentCourse.image || (uniObj ? uniObj.imageSrc : null) || null,
-        fee: feeObj,
-        brochureUrl: pc.brochureUrl || parentCourse.brochureUrl || null,
-      };
-    });
-
-    if ((!programs || programs.length === 0) && (!category || category === "all")) {
-      const masterCourses = await Course.find(courseMatch)
-        .populate({ path: "fee", select: "_id title amount currency slug" })
-        .populate({ path: "image", select: "_id name url alt" })
-        .populate({ path: "logo", select: "_id name url alt" })
+    // Run count + paginated query in parallel
+    const [totalCount, partnerCourses] = await Promise.all([
+      PartnerCourse.countDocuments(partnerFilter),
+      PartnerCourse.find(partnerFilter)
         .populate({
           path: "university",
           select: "_id name slug logoSrc imageSrc location approvals rating reviews",
@@ -221,38 +32,89 @@ async function getWebsiteCourses(request, reply) {
             { path: "imageSrc", select: "_id name url alt" },
           ],
         })
-        .sort({ order: 1, createdAt: -1 })
-        .lean();
+        .populate({
+          path: "course",
+          select: "_id title slug category logo image fee brochureUrl syllabus careers",
+          populate: [
+            {
+              path: "university",
+              select: "_id name slug logoSrc imageSrc location approvals rating reviews",
+              populate: [
+                { path: "logoSrc", select: "_id name url alt" },
+                { path: "imageSrc", select: "_id name url alt" },
+              ],
+            },
+            { path: "logo", select: "_id name url alt" },
+            { path: "image", select: "_id name url alt" },
+            { path: "fee", select: "_id title amount currency slug" },
+          ],
+        })
+        .populate({ path: "subcourse", select: "_id title slug course" })
+        .populate({
+          path: "category",
+          select: "_id name slug type title description logo logoSrc image imageSrc order",
+          populate: [
+            { path: "logo", select: "_id name url alt" },
+            { path: "logoSrc", select: "_id name url alt" },
+            { path: "imageSrc", select: "_id name url alt" },
+          ],
+        })
+        .populate({ path: "fee", select: "_id title amount currency slug" })
+        .populate({ path: "duration", select: "_id title slug months" })
+        .populate({ path: "eligibility", select: "_id title slug" })
+        .populate({ path: "tenant", select: "_id name slug logo" })
+        .sort(mSort)
+        .skip(skipNum)
+        .limit(limitNum || 0)
+        .lean(),
+    ]);
 
-      programs = masterCourses || [];
-    }
+    // Normalize each result — merge university + logo from parent Course if missing
+    const programs = (partnerCourses || []).map((pc) => {
+      const parentCourse =
+        pc.course && typeof pc.course === "object" ? pc.course : {};
+      const uniObj =
+        pc.university &&
+        typeof pc.university === "object" &&
+        pc.university.name
+          ? pc.university
+          : parentCourse.university &&
+            typeof parentCourse.university === "object"
+          ? parentCourse.university
+          : null;
 
-    // Sort by Title if requested
-    if (sort === "title-asc") {
-      programs.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
-    } else if (sort === "title-desc") {
-      programs.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
-    }
+      return {
+        ...pc,
+        title: pc.title || parentCourse.title || "Course",
+        slug: pc.slug || parentCourse.slug || "",
+        university: uniObj,
+        logo:
+          pc.logo ||
+          parentCourse.logo ||
+          (uniObj ? uniObj.logoSrc : null) ||
+          null,
+        image:
+          pc.image ||
+          parentCourse.image ||
+          (uniObj ? uniObj.imageSrc : null) ||
+          null,
+        fee: pc.fee || parentCourse.fee || null,
+        brochureUrl: pc.brochureUrl || parentCourse.brochureUrl || null,
+      };
+    });
 
-    const totalCount = programs.length;
-
-    // Apply Limit & Page
-    const pageNum = parseInt(page, 10) || 1;
-    const limitNum = parseInt(limit, 10) || 0;
-
-    let paginatedPrograms = programs;
-    if (limitNum > 0) {
-      const startIndex = (pageNum - 1) * limitNum;
-      paginatedPrograms = programs.slice(startIndex, startIndex + limitNum);
-    }
+    const totalPages = limitNum > 0 ? Math.ceil(totalCount / limitNum) : 1;
 
     return reply.code(200).send({
       success: true,
       result: {
-        programs: paginatedPrograms || [],
+        programs,
         total: totalCount,
         page: pageNum,
         limit: limitNum,
+        totalPages,
+        hasNextPage: limitNum > 0 && pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
       },
     });
   } catch (error) {
@@ -273,39 +135,44 @@ async function getWebsiteCourseBySlug(request, reply) {
       });
     }
 
-    let courseDoc = await Course.findOne({ slug, removed: false })
+    // Try PartnerCourse first by its own slug
+    let partnerCourse = await PartnerCourse.findOne({ slug, removed: false })
       .populate({
-        path: "university",
-        select: "_id name slug logoSrc imageSrc description location approvals rating reviews",
+        path: "course",
         populate: [
+          {
+            path: "university",
+            select: "_id name slug logoSrc imageSrc description location approvals rating reviews",
+            populate: [
+              { path: "logoSrc", select: "_id name url alt" },
+              { path: "imageSrc", select: "_id name url alt" },
+            ],
+          },
+          { path: "logo", select: "_id name url alt" },
+          { path: "image", select: "_id name url alt" },
+          { path: "fee", select: "_id title amount currency slug" },
+        ],
+      })
+      .populate({
+        path: "category",
+        select: "_id name slug type title description logo logoSrc image imageSrc order",
+        populate: [
+          { path: "logo", select: "_id name url alt" },
           { path: "logoSrc", select: "_id name url alt" },
           { path: "imageSrc", select: "_id name url alt" },
         ],
       })
-      .populate({ path: "logo", select: "_id name url alt" })
-      .populate({ path: "image", select: "_id name url alt" })
-      .populate({ path: "fee", select: "_id title amount currency slug" })
+      .populate({ path: "duration", select: "_id title slug months" })
+      .populate({ path: "eligibility", select: "_id title slug" })
+      .populate({ path: "tenant", select: "_id name slug logo" })
       .lean();
 
-    let partnerCourse = null;
-    if (courseDoc) {
-      partnerCourse = await PartnerCourse.findOne({ course: courseDoc._id, removed: false })
-        .populate({
-          path: "category",
-          select: "_id name slug type title description logo logoSrc image imageSrc order",
-          populate: [
-            { path: "logo", select: "_id name url alt" },
-            { path: "logoSrc", select: "_id name url alt" },
-            { path: "imageSrc", select: "_id name url alt" },
-          ],
-        })
-        .populate({ path: "duration", select: "_id title slug months" })
-        .populate({ path: "eligibility", select: "_id title slug" })
-        .lean();
-    } else {
-      partnerCourse = await PartnerCourse.findOne({ slug, removed: false })
+    // Fallback — find PartnerCourse by its linked Course slug
+    if (!partnerCourse) {
+      partnerCourse = await PartnerCourse.findOne({ removed: false })
         .populate({
           path: "course",
+          match: { slug },
           populate: [
             {
               path: "university",
@@ -331,53 +198,63 @@ async function getWebsiteCourseBySlug(request, reply) {
         })
         .populate({ path: "duration", select: "_id title slug months" })
         .populate({ path: "eligibility", select: "_id title slug" })
+        .populate({ path: "tenant", select: "_id name slug logo" })
         .lean();
 
-      if (partnerCourse && partnerCourse.course) {
-        courseDoc = partnerCourse.course;
-      }
+      // Discard if the course field didn't match (populate match returns null)
+      if (partnerCourse && !partnerCourse.course) partnerCourse = null;
     }
 
-    if (!courseDoc && !partnerCourse) {
+    if (!partnerCourse) {
       return reply.code(404).send({
         success: false,
         message: "Course not found",
       });
     }
 
-    const title = courseDoc?.title || partnerCourse?.title || "Course Details";
-    const courseSlug = courseDoc?.slug || partnerCourse?.slug || slug;
-    const description = partnerCourse?.description || "Comprehensive distance education program designed for executive career growth, practical industry skills, and leadership excellence.";
+    const courseDoc = partnerCourse.course && typeof partnerCourse.course === "object"
+      ? partnerCourse.course
+      : {};
 
-    const universityObj = courseDoc?.university || partnerCourse?.university || null;
-    const durationObj = partnerCourse?.duration;
-    const eligibilityObj = partnerCourse?.eligibility;
-    const categoryObj = partnerCourse?.category;
+    const title = partnerCourse.title || courseDoc.title || "Course Details";
+    const courseSlug = partnerCourse.slug || courseDoc.slug || slug;
+    const description = partnerCourse.description ||
+      "Comprehensive distance education program designed for executive career growth, practical industry skills, and leadership excellence.";
 
-    const formattedResult = {
-      _id: courseDoc?._id || partnerCourse?._id,
-      title,
-      slug: courseSlug,
-      description,
-      university: universityObj,
-      logo: courseDoc?.logo || partnerCourse?.logo || null,
-      image: courseDoc?.image || partnerCourse?.image || null,
-      fee: courseDoc?.fee || partnerCourse?.fee || null,
-      brochureUrl: courseDoc?.brochureUrl || partnerCourse?.brochureUrl || null,
-      duration: durationObj ? (typeof durationObj === "object" ? durationObj.title : durationObj) : null,
-      eligibility: eligibilityObj ? (typeof eligibilityObj === "object" ? eligibilityObj.title : eligibilityObj) : null,
-      level: categoryObj ? (typeof categoryObj === "object" ? categoryObj.name : categoryObj) : null,
-      syllabus: (partnerCourse?.syllabus && partnerCourse.syllabus.length > 0)
-        ? partnerCourse.syllabus
-        : (courseDoc?.syllabus && courseDoc.syllabus.length > 0)
-          ? courseDoc.syllabus
-          : [],
-      careers: partnerCourse?.careers || courseDoc?.careers || null,
-    };
+    const universityObj = courseDoc.university || partnerCourse.university || null;
+    const durationObj = partnerCourse.duration;
+    const eligibilityObj = partnerCourse.eligibility;
+    const categoryObj = partnerCourse.category;
 
     return reply.code(200).send({
       success: true,
-      result: formattedResult,
+      result: {
+        _id: partnerCourse._id || courseDoc._id,
+        title,
+        slug: courseSlug,
+        description,
+        university: universityObj,
+        logo: partnerCourse.logo || courseDoc.logo || null,
+        image: partnerCourse.image || courseDoc.image || null,
+        fee: partnerCourse.fee || courseDoc.fee || null,
+        brochureUrl: partnerCourse.brochureUrl || courseDoc.brochureUrl || null,
+        duration: durationObj
+          ? typeof durationObj === "object" ? durationObj.title : durationObj
+          : null,
+        eligibility: eligibilityObj
+          ? typeof eligibilityObj === "object" ? eligibilityObj.title : eligibilityObj
+          : null,
+        level: categoryObj
+          ? typeof categoryObj === "object" ? categoryObj.name : categoryObj
+          : null,
+        syllabus:
+          partnerCourse.syllabus && partnerCourse.syllabus.length > 0
+            ? partnerCourse.syllabus
+            : courseDoc.syllabus && courseDoc.syllabus.length > 0
+            ? courseDoc.syllabus
+            : [],
+        careers: partnerCourse.careers || courseDoc.careers || null,
+      },
     });
   } catch (error) {
     return reply.code(500).send({

@@ -5,6 +5,7 @@ const {
   remove,
   update,
   selectOptions,
+  selectWebsiteOptions,
 } = require("./crud.controller");
 
 module.exports = {
@@ -14,4 +15,5 @@ module.exports = {
   remove,
   update,
   selectOptions,
+  selectWebsiteOptions,
 };

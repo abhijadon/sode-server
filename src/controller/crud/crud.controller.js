@@ -524,4 +524,145 @@ function selectOptions(
   };
 }
 
-module.exports = { create, update, remove, read, pagination, selectOptions };
+function selectWebsiteOptions(Model, customSelect = null) {
+  return async (request, reply) => {
+    try {
+      // ✅ Build clean query conditions for active website options
+      const query = {};
+
+      if (Model.schema && Model.schema.path("removed")) {
+        query.removed = false;
+      }
+      if (Model.schema && Model.schema.path("enabled")) {
+        query.enabled = true;
+      }
+
+      // Allow filtering website options by entity / category / type / course
+      if (request.query?.entity) {
+        query.entity = { $in: [request.query.entity] };
+      }
+      if (request.query?.category && Model.schema?.path("category")) {
+        query.category = request.query.category;
+      }
+      if (request.query?.type && Model.schema?.path("type")) {
+        query.type = request.query.type;
+      }
+      if (request.query?.course && Model.schema?.path("course")) {
+        query.course = request.query.course;
+      }
+
+      // Fields to select for lightweight website filter options
+      let fieldsToSelect = customSelect;
+      if (!fieldsToSelect) {
+        const potentialFields = [
+          "name",
+          "fullname",
+          "title",
+          "label",
+          "slug",
+          "code",
+          "type",
+          "level",
+          "course",
+          "minAmount",
+          "maxAmount",
+          "currency",
+          "months",
+          "years",
+          "logo",
+          "image",
+          "enabled",
+        ];
+        const validFields = potentialFields.filter(
+          (f) => Model.schema && Model.schema.path(f)
+        );
+        fieldsToSelect = ["_id", ...validFields].join(" ");
+      } else {
+        const requestedArray = fieldsToSelect.split(" ");
+        const validArray = requestedArray.filter(
+          (f) => f === "_id" || (Model.schema && Model.schema.path(f))
+        );
+        if (validArray.length > 0) {
+          fieldsToSelect = validArray.join(" ");
+        }
+      }
+
+      let itemsQuery = Model.find(query).select(fieldsToSelect);
+
+      if (Model.schema && Model.schema.path("course")) {
+        itemsQuery = itemsQuery.populate({
+          path: "course",
+          select: "name title slug code",
+          strictPopulate: false,
+        });
+      }
+      if (Model.schema && Model.schema.path("university")) {
+        itemsQuery = itemsQuery.populate({
+          path: "university",
+          select: "name title slug logoSrc imageSrc",
+          strictPopulate: false,
+        });
+      }
+      if (Model.schema && Model.schema.path("logo")) {
+        itemsQuery = itemsQuery.populate({
+          path: "logo",
+          select: "url name",
+          strictPopulate: false,
+        });
+      }
+
+      const items = await itemsQuery
+        .sort({
+          name: 1,
+          title: 1,
+          fullname: 1,
+          createdAt: -1,
+        })
+        .lean();
+
+      // ✅ Clean format: return ONLY essential lightweight option fields for website filters
+      const formattedItems = (items || []).map((item) => {
+        const uniObj = typeof item.university === "object" && item.university ? item.university : null;
+        const titleOrName = item.title || item.name || item.fullname || item.label || uniObj?.name || uniObj?.title || "";
+        const cleanObj = {
+          _id: String(item._id),
+          value: String(item._id),
+          label: titleOrName,
+          title: titleOrName,
+          name: item.name || titleOrName,
+          slug: item.slug || uniObj?.slug || "",
+        };
+
+        if (item.code) cleanObj.code = item.code;
+        if (item.type) cleanObj.type = item.type;
+        if (item.level) cleanObj.level = item.level;
+        if (item.course) cleanObj.course = item.course;
+        if (item.minAmount !== undefined) cleanObj.minAmount = item.minAmount;
+        if (item.maxAmount !== undefined) cleanObj.maxAmount = item.maxAmount;
+        if (item.currency) cleanObj.currency = item.currency;
+        if (item.months !== undefined) cleanObj.months = item.months;
+        if (item.years !== undefined) cleanObj.years = item.years;
+        if (item.logo) cleanObj.logo = item.logo;
+
+        return cleanObj;
+      });
+
+      return reply.code(200).send({
+        success: true,
+        result: formattedItems,
+        items: formattedItems,
+        message: `Website options for ${Model.modelName} retrieved successfully`,
+      });
+    } catch (error) {
+      console.error(`❌ Error in selectWebsiteOptions(${Model.modelName}):`, error);
+      return reply.code(500).send({
+        success: false,
+        result: null,
+        message: `An error occurred while retrieving website options for ${Model.modelName}`,
+        error: error.message,
+      });
+    }
+  };
+}
+
+module.exports = { create, update, remove, read, pagination, selectOptions, selectWebsiteOptions };

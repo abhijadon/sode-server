@@ -8,6 +8,7 @@ const CrudController = require("../controller/crud");
 const AuthController = require("../controller/auth");
 const HeaderController = require("../controller/header");
 const CourseController = require("../controller/course/course.controller");
+const { buildCourseFilter } = require("../controller/course/course.filter");
 const UniversityController = require("../controller/university/university.controller");
 const PageMetaController = require("../controller/pagemeta/pagemeta.controller");
 const SiteSettingController = require("../controller/sitesetting/sitesetting.controller");
@@ -383,6 +384,13 @@ module.exports = async function (app, options) {
       },
       {
         method: "GET",
+        url: `/${entity}/website-options`,
+        handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+        preValidation: null,
+        ...useCache(300),
+      },
+      {
+        method: "GET",
         url: `/${entity}/read/:id`,
         handler: CrudController.read(Model, populateFields),
         preValidation: readPipeline,
@@ -441,28 +449,37 @@ module.exports = async function (app, options) {
         {
           method: "GET",
           url: `/courses/website-list`,
+          ...useCache(300),
+          preHandler: buildCourseFilter,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
-          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
+          ...useCache(300),
+          preHandler: buildCourseFilter,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
-          ...useCache(300),
         },
         {
           method: "GET",
           url: `/courses/website-read`,
+          ...useCache(300),
           handler: CourseController.getWebsiteCourseBySlug,
           preValidation: null,
-          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-read`,
+          ...useCache(300),
           handler: CourseController.getWebsiteCourseBySlug,
+          preValidation: null,
+        },
+        {
+          method: "GET",
+          url: `/courses/website-options`,
+          handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
           preValidation: null,
           ...useCache(300),
         }
@@ -472,16 +489,18 @@ module.exports = async function (app, options) {
         {
           method: "GET",
           url: `/partnercourses/website-list`,
+          ...useCache(300),
+          preHandler: buildCourseFilter,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
-          ...useCache(300),
         },
         {
           method: "GET",
           url: `/${entity}/website-list`,
+          ...useCache(300),
+          preHandler: buildCourseFilter,
           handler: CourseController.getWebsiteCourses,
           preValidation: null,
-          ...useCache(300),
         },
         {
           method: "GET",
@@ -496,8 +515,23 @@ module.exports = async function (app, options) {
           handler: CourseController.getWebsiteCourseBySlug,
           preValidation: null,
           ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/partnercourses/website-options`,
+          handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+          preValidation: null,
+          ...useCache(300),
         }
       );
+    } else if (entity === "subcourse") {
+      routes.push({
+        method: "GET",
+        url: `/subcourses/website-options`,
+        handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+        preValidation: null,
+        ...useCache(300),
+      });
     }
 
     // ✅ SPECIAL PUBLIC WEBSITE ROUTES FOR UNIVERSITIES & PARTNER UNIVERSITIES
@@ -514,6 +548,13 @@ module.exports = async function (app, options) {
           method: "GET",
           url: `/${entity}/website-list`,
           handler: UniversityController.getWebsiteUniversities,
+          preValidation: null,
+          ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/universities/website-options`,
+          handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
           preValidation: null,
           ...useCache(300),
         }
@@ -540,8 +581,39 @@ module.exports = async function (app, options) {
           handler: UniversityController.getWebsiteUniversities,
           preValidation: null,
           ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/partneruniversities/website-options`,
+          handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+          preValidation: null,
+          ...useCache(300),
         }
       );
+    } else if (entity === "fee") {
+      routes.push({
+        method: "GET",
+        url: `/fees/website-options`,
+        handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+        preValidation: null,
+        ...useCache(300),
+      });
+    } else if (entity === "duration") {
+      routes.push({
+        method: "GET",
+        url: `/durations/website-options`,
+        handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+        preValidation: null,
+        ...useCache(300),
+      });
+    } else if (entity === "location") {
+      routes.push({
+        method: "GET",
+        url: `/locations/website-options`,
+        handler: CrudController.selectWebsiteOptions(Model, customOptionsSelect),
+        preValidation: null,
+        ...useCache(300),
+      });
     }
 
     // ✅ SPECIAL PUBLIC WEBSITE ROUTE FOR PAGES BUILDER
@@ -647,6 +719,13 @@ module.exports = async function (app, options) {
           handler: CategoryController.getWebsiteCategoryTree,
           preValidation: null,
           ...useCache(300),
+        },
+        {
+          method: "GET",
+          url: `/categories/website-options`,
+          handler: CategoryController.getWebsiteCategoryOptions,
+          preValidation: null,
+          ...useCache(300),
         }
       );
     }
@@ -730,6 +809,8 @@ module.exports = async function (app, options) {
 
       if (routeOpts.method === "GET") {
         const cacheHooks = useCache(300);
+        // Custom preHandlers (e.g. buildCourseFilter) MUST run before the cache
+        // preHandler so they can populate request state before any early reply.
         routeConfig.preHandler = customPreHandler
           ? Array.isArray(customPreHandler)
             ? [...customPreHandler, cacheHooks.preHandler]

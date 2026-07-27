@@ -23,12 +23,7 @@ async function startServer() {
 
     console.log(`⚡ Fastify Server running on http://${HOST}:${PORT}`);
   } catch (error) {
-    // अगर DB या सर्वर लिसन में कोई भी एरर आता है, तो एरर लॉग करें और सेफली एग्जिट करें
-    if (app.log && typeof app.log.error === "function") {
-      app.log.error(error);
-    } else {
-      console.error("❌ Startup Error:", error);
-    }
+    console.error("❌ STARTUP ERROR DETAILS:", error);
     process.exit(1);
   }
 }
