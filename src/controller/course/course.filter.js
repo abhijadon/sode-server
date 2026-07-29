@@ -333,17 +333,53 @@ async function buildCourseFilter(request, reply) {
     partnerFilter.featured = true;
   }
 
-  // ─── 8️⃣ Text Search ──────────────────────────────────────────────────────
+  // ─── 8️⃣ Dynamic Text & Category Search ────────────────────────────────────
   if (search && search.trim().length > 0) {
-    const sRegex = new RegExp(search.trim(), "i");
-    andConditions.push({
+    const rawSearch = search.trim();
+    const cleanSearch = rawSearch.replace(/-/g, " ");
+    const sRegex = new RegExp(cleanSearch.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&"), "i");
+
+    const matchingCats = await Category.find({
+      removed: false,
       $or: [
-        { title: sRegex },
-        { description: sRegex },
-        { "universityOfferings.subcourses.title": sRegex },
-        { "universityOfferings.subcourses.content": sRegex },
+        { name: sRegex },
+        { slug: new RegExp(rawSearch.replace(/\s+/g, "-"), "i") },
       ],
-    });
+    })
+      .select("_id")
+      .lean();
+
+    const catIds = matchingCats.map((c) => c._id);
+
+    const matchingUnis = await University.find({
+      removed: false,
+      $or: [
+        { name: sRegex },
+        { slug: new RegExp(rawSearch.replace(/\s+/g, "-"), "i") },
+      ],
+    })
+      .select("_id")
+      .lean();
+
+    const uniIds = matchingUnis.map((u) => u._id);
+
+    const searchOrConditions = [
+      { title: sRegex },
+      { slug: sRegex },
+      { "universityOfferings.subcourses.title": sRegex },
+    ];
+
+    if (catIds.length > 0) {
+      searchOrConditions.push({ categories: { $in: catIds } });
+      searchOrConditions.push({ "universityOfferings.category": { $in: catIds } });
+      searchOrConditions.push({ "universityOfferings.subcourses.category": { $in: catIds } });
+    }
+
+    if (uniIds.length > 0) {
+      searchOrConditions.push({ "universityOfferings.university": { $in: uniIds } });
+    }
+
+    andConditions.push({ $or: searchOrConditions });
   }
 
   // Combine all conditions into Mongoose query

@@ -245,15 +245,24 @@ async function getWebsiteCourses(request, reply) {
       });
     }
 
-    // 5️⃣ Search Query Filter
+    // 5️⃣ Search Query Filter (Title, Category, University, Subcourse)
     if (search && search.trim().length > 0) {
       const sTerm = search.trim().toLowerCase();
       filteredPrograms = filteredPrograms.filter((prog) => {
         const title = (prog.title || "").toLowerCase();
-        const desc = (prog.description || "").toLowerCase();
         const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
         const uniName = (uniObj?.name || "").toLowerCase();
-        return title.includes(sTerm) || desc.includes(sTerm) || uniName.includes(sTerm);
+        const provider = (prog.provider || "").toLowerCase();
+        const subCatName = (prog.subcourseCategory?.name || "").toLowerCase();
+        const subCatSlug = (prog.subcourseCategory?.slug || "").toLowerCase();
+        const mainCatNames = (prog.categories || []).map((c) => (c?.name || "").toLowerCase()).join(" ");
+        const mainCatSlugs = (prog.categories || []).map((c) => (c?.slug || "").toLowerCase()).join(" ");
+        const subName = (prog.subcourse?.name || "").toLowerCase();
+        const subTitle = (prog.subcourse?.title || "").toLowerCase();
+
+        const targetText = `${title} ${uniName} ${provider} ${subCatName} ${subCatSlug} ${mainCatNames} ${mainCatSlugs} ${subName} ${subTitle}`;
+
+        return targetText.includes(sTerm);
       });
     }
 
