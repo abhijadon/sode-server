@@ -20,16 +20,23 @@ function buildSchemaPermissionQuery(Model, req) {
   }
 
   if (req.userPermissionContext) {
-    const { visibleUserIds, tenantId, workspaceIds, isAdminOrOwner } =
+    const { visibleUserIds, tenantIds, workspaceIds, isAdminOrOwner } =
       req.userPermissionContext;
 
     if (!isAdminOrOwner) {
-      // 1. Tenant Isolation Check
-      if (tenantId) {
-        if (Model.modelName === "Tenant") {
-          queryConditions._id = new mongoose.Types.ObjectId(tenantId);
-        } else if (Model.schema && Model.schema.path("tenantId")) {
-          queryConditions.tenantId = new mongoose.Types.ObjectId(tenantId);
+      // 1. Tenant Isolation Check (tenantIds is now an array since workspace.tenantId is [])
+      if (tenantIds && tenantIds.length > 0) {
+        const tenantObjIds = tenantIds
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+          .map((id) => new mongoose.Types.ObjectId(id));
+
+        if (tenantObjIds.length > 0) {
+          if (Model.modelName === "Tenant") {
+            queryConditions._id = { $in: tenantObjIds };
+          } else if (Model.schema && Model.schema.path("tenantId")) {
+            // workspace.tenantId is an array — $in matches any element in the array
+            queryConditions.tenantId = { $in: tenantObjIds };
+          }
         }
       }
 
@@ -378,7 +385,11 @@ function pagination(Model, populateFields = []) {
 
       if (Array.isArray(populateFields) && populateFields.length > 0) {
         populateFields.forEach((field) => {
-          if (field) query = query.populate(field);
+          if (field) {
+            const popObj = typeof field === "string" ? { path: field } : { ...field };
+            popObj.strictPopulate = false;
+            query = query.populate(popObj);
+          }
         });
       }
 

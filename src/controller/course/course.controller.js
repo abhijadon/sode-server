@@ -1,119 +1,276 @@
 "use strict";
 
-/**
- * course.controller.js
- *
- * Handlers that rely on `request.courseFilter` being populated by
- * the `buildCourseFilter` preHandler middleware (course.filter.js).
- *
- * Route setup example:
- *   fastify.get("/website-list", {
- *     preHandler: buildCourseFilter,
- *     handler: getWebsiteCourses,
- *   });
- */
+const { Course } = require("../../model/Course");
 
-const { PartnerCourse } = require("../../model/PartnerCourse");
+const populateOfferings = [
+  {
+    path: "universityOfferings.university",
+    select: "_id name slug logoSrc imageSrc location approvals rating reviews workspaceId",
+    populate: [
+      { path: "logoSrc", select: "_id name url alt" },
+      { path: "imageSrc", select: "_id name url alt" },
+      { path: "workspaceId", select: "_id name description" },
+    ],
+  },
+  { path: "universityOfferings.workspace", select: "_id name description" },
+  { path: "universityOfferings.fee", select: "_id title amount currency slug" },
+  { path: "universityOfferings.duration", select: "_id title slug months" },
+  { path: "universityOfferings.eligibility", select: "_id title slug" },
+  { path: "universityOfferings.category", select: "_id name slug" },
+  {
+    path: "universityOfferings.subcourses.subcourse",
+    select: "_id title name slug shortDescription description content modules course courses",
+    populate: [
+      { path: "course", select: "_id title slug description content" },
+      { path: "courses", select: "_id title slug description content" }
+    ]
+  },
+  { path: "universityOfferings.subcourses.category", select: "_id name slug" },
+  { path: "universityOfferings.subcourses.fee", select: "_id title amount currency slug" },
+  { path: "universityOfferings.subcourses.duration", select: "_id title slug months" },
+  { path: "universityOfferings.subcourses.eligibility", select: "_id title slug" },
+  { path: "universityOfferings.brochureUrl", select: "_id name url alt" },
+];
 
 async function getWebsiteCourses(request, reply) {
   try {
     const { partnerFilter, mSort, pageNum, limitNum, skipNum } =
       request.courseFilter;
 
-    // Run count + paginated query in parallel
-    const [totalCount, partnerCourses] = await Promise.all([
-      PartnerCourse.countDocuments(partnerFilter),
-      PartnerCourse.find(partnerFilter)
-        .populate({
-          path: "university",
-          select: "_id name slug logoSrc imageSrc location approvals rating reviews",
-          populate: [
-            { path: "logoSrc", select: "_id name url alt" },
-            { path: "imageSrc", select: "_id name url alt" },
-          ],
-        })
-        .populate({
-          path: "course",
-          select: "_id title slug category logo image fee brochureUrl syllabus careers",
-          populate: [
-            {
-              path: "university",
-              select: "_id name slug logoSrc imageSrc location approvals rating reviews",
-              populate: [
-                { path: "logoSrc", select: "_id name url alt" },
-                { path: "imageSrc", select: "_id name url alt" },
-              ],
-            },
-            { path: "logo", select: "_id name url alt" },
-            { path: "image", select: "_id name url alt" },
-            { path: "fee", select: "_id title amount currency slug" },
-          ],
-        })
-        .populate({ path: "subcourse", select: "_id title slug course" })
-        .populate({
-          path: "category",
-          select: "_id name slug type title description logo logoSrc image imageSrc order",
-          populate: [
-            { path: "logo", select: "_id name url alt" },
-            { path: "logoSrc", select: "_id name url alt" },
-            { path: "imageSrc", select: "_id name url alt" },
-          ],
-        })
-        .populate({ path: "fee", select: "_id title amount currency slug" })
-        .populate({ path: "duration", select: "_id title slug months" })
-        .populate({ path: "eligibility", select: "_id title slug" })
-        .populate({ path: "tenant", select: "_id name slug logo" })
-        .sort(mSort)
-        .skip(skipNum)
-        .limit(limitNum || 0)
-        .lean(),
-    ]);
+    // Fetch matching master course documents
+    const courses = await Course.find(partnerFilter)
+      .populate({ path: "categories", select: "_id name slug" })
+      .populate({ path: "logo", select: "_id name url alt" })
+      .populate({ path: "image", select: "_id name url alt" })
+      .populate({ path: "brochureUrl", select: "_id name url alt" })
+      .populate(populateOfferings)
+      .sort(mSort)
+      .lean();
 
-    // Normalize each result — merge university + logo from parent Course if missing
-    const programs = (partnerCourses || []).map((pc) => {
-      const parentCourse =
-        pc.course && typeof pc.course === "object" ? pc.course : {};
-      const uniObj =
-        pc.university &&
-        typeof pc.university === "object" &&
-        pc.university.name
-          ? pc.university
-          : parentCourse.university &&
-            typeof parentCourse.university === "object"
-          ? parentCourse.university
-          : null;
+    // Dynamically flatten universityOfferings & subcourses into individual program items for API response
+    const flattenedPrograms = [];
 
-      return {
-        ...pc,
-        title: pc.title || parentCourse.title || "Course",
-        slug: pc.slug || parentCourse.slug || "",
-        university: uniObj,
-        logo:
-          pc.logo ||
-          parentCourse.logo ||
-          (uniObj ? uniObj.logoSrc : null) ||
-          null,
-        image:
-          pc.image ||
-          parentCourse.image ||
-          (uniObj ? uniObj.imageSrc : null) ||
-          null,
-        fee: pc.fee || parentCourse.fee || null,
-        brochureUrl: pc.brochureUrl || parentCourse.brochureUrl || null,
-      };
+    courses.forEach((courseDoc) => {
+      const offerings = Array.isArray(courseDoc.universityOfferings) ? courseDoc.universityOfferings : [];
+
+      if (offerings.length > 0) {
+        offerings.forEach((offering) => {
+          const subItems = Array.isArray(offering.subcourses) && offering.subcourses.length > 0
+            ? offering.subcourses
+            : [];
+
+          if (subItems.length > 0) {
+            subItems.forEach((subItem) => {
+              const uniObj = offering.university;
+              const uniName = uniObj?.name || "";
+              const rawTitle = subItem.title || courseDoc.title;
+
+              // Prepend university name to title if not already present
+              let finalTitle = rawTitle;
+              if (uniName && !finalTitle.toLowerCase().includes(uniName.toLowerCase())) {
+                finalTitle = `${uniName} - ${finalTitle}`;
+              }
+
+              // Slug resolution: slugify subItem.title for dba/mba courses to keep it clean and specific
+              let finalSlug = courseDoc.slug;
+              if (courseDoc.slug === "dba" || courseDoc.slug === "mba") {
+                const slugify = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                finalSlug = slugify(rawTitle);
+              }
+
+              flattenedPrograms.push({
+                _id: subItem._id || courseDoc._id,
+                courseId: courseDoc._id,
+                title: finalTitle,
+                slug: finalSlug,
+                description: subItem.description || courseDoc.description,
+                content: subItem.content || courseDoc.description,
+                categories: courseDoc.categories,
+                logo: courseDoc.logo,
+                image: courseDoc.image,
+                brochureUrl: courseDoc.brochureUrl,
+                featured: courseDoc.featured,
+                order: courseDoc.order,
+                fee: subItem.fee || offering.fee,
+                duration: subItem.duration || offering.duration,
+                keyHighlights: subItem.keyHighlights || [],
+                whoCanApply: subItem.whoCanApply || [],
+                admissionProcess: subItem.admissionProcess || [],
+                subcourseCategory: subItem.category,
+                isSubcourse: true,
+                university: uniObj,
+                subcourse: subItem.subcourse,
+                provider: offering.workspace?.name || "upGrad",
+              });
+            });
+          } else {
+            const uniObj = offering.university;
+            const uniName = uniObj?.name || "";
+            let finalTitle = courseDoc.title;
+            if (uniName && !finalTitle.toLowerCase().includes(uniName.toLowerCase())) {
+              finalTitle = `${uniName} - ${finalTitle}`;
+            }
+
+            flattenedPrograms.push({
+              _id: courseDoc._id,
+              title: finalTitle,
+              slug: courseDoc.slug,
+              description: courseDoc.description,
+              content: courseDoc.description,
+              categories: courseDoc.categories,
+              logo: courseDoc.logo,
+              image: courseDoc.image,
+              brochureUrl: courseDoc.brochureUrl,
+              featured: courseDoc.featured,
+              order: courseDoc.order,
+              fee: offering.fee,
+              duration: offering.duration,
+              keyHighlights: [],
+              whoCanApply: [],
+              admissionProcess: [],
+              university: uniObj,
+              provider: offering.workspace?.name || "upGrad",
+            });
+          }
+        });
+      } else {
+        flattenedPrograms.push(courseDoc);
+      }
     });
 
-    const totalPages = limitNum > 0 ? Math.ceil(totalCount / limitNum) : 1;
+    // Smart multi-field filtering on flattened programs
+    const { subcategory, subcourse, university, duration, fee, search } = request.query || {};
+
+    let filteredPrograms = flattenedPrograms;
+
+    // 1️⃣ Subcategory / Subcourse Filter
+    const subParam = subcategory || subcourse;
+    if (subParam && subParam !== "all") {
+      const rawTokens = String(subParam)
+        .split(/[,|]/)
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+
+      const searchWords = rawTokens.flatMap((t) => {
+        const clean = t.replace(/^browse-/, "").replace(/-/g, " ");
+        return [t, clean];
+      });
+
+      const searchRegexes = searchWords.map((w) => {
+        const escaped = w.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+        if (w.length <= 3) {
+          return new RegExp("\\b" + escaped + "\\b", "i");
+        }
+        return new RegExp(escaped, "i");
+      });
+
+      filteredPrograms = filteredPrograms.filter((prog) => {
+        const title = prog.title || "";
+        const desc = prog.description || "";
+        const content = prog.content || "";
+
+        const matchesText = searchRegexes.some((regex) => regex.test(title) || regex.test(desc) || regex.test(content));
+
+        const subCatObj = prog.subcourseCategory;
+        let matchesCat = false;
+
+        if (subCatObj) {
+          const cSlug = subCatObj.slug || subCatObj.name || "";
+          const cName = subCatObj.name || "";
+          matchesCat = searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName) || String(subCatObj._id) === regex.source);
+        } else if (!prog.isSubcourse) {
+          const offering = prog.universityOfferings && prog.universityOfferings[0];
+          const offeringCats = Array.isArray(offering?.category) ? offering.category : [];
+          matchesCat = offeringCats.some((cat) => {
+            const cSlug = cat?.slug || cat?.name || "";
+            const cName = cat?.name || "";
+            return searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName));
+          });
+        }
+
+        return matchesText || matchesCat;
+      });
+    }
+
+    // 2️⃣ University Filter
+    if (university && university !== "all") {
+      const uniTokens = String(university)
+        .split(/[,|]/)
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean);
+
+      filteredPrograms = filteredPrograms.filter((prog) => {
+        const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
+        const uniName = (uniObj?.name || "").toLowerCase();
+        const uniSlug = (uniObj?.slug || "").toLowerCase();
+        const uniId = String(uniObj?._id || "").toLowerCase();
+
+        return uniTokens.some((t) => uniSlug.includes(t) || uniName.includes(t) || t.includes(uniSlug) || uniId === t);
+      });
+    }
+
+    // 3️⃣ Duration Filter
+    if (duration && duration !== "all") {
+      const durStr = String(duration).toLowerCase();
+      filteredPrograms = filteredPrograms.filter((prog) => {
+        const durObj = prog.duration;
+        const months = durObj?.months || 0;
+        const title = (durObj?.title || "").toLowerCase();
+
+        if (durStr === "06-month" || durStr === "6-month" || durStr === "6-months") {
+          return months <= 6 || title.includes("6");
+        }
+        if (durStr === "06-12-months" || durStr === "6-12-months") {
+          return months >= 6 && months <= 12;
+        }
+        if (durStr === "12-36-months" || durStr === "12-36") {
+          return months >= 12;
+        }
+        return true;
+      });
+    }
+
+    // 4️⃣ Fee Filter
+    if (fee && fee !== "all") {
+      const feeStr = String(fee).toLowerCase();
+      filteredPrograms = filteredPrograms.filter((prog) => {
+        const amount = prog.fee?.amount || 0;
+
+        if (feeStr === "0-1-lakh" || feeStr === "1-lakh") return amount <= 100000;
+        if (feeStr === "1-2-lakh") return amount >= 100000 && amount <= 200000;
+        if (feeStr === "2-5-lakh") return amount >= 200000 && amount <= 500000;
+        if (feeStr === "5-10-lakh") return amount >= 500000 && amount <= 1000000;
+        if (feeStr === "above-10-lakh" || feeStr === "10-lakh+") return amount >= 1000000;
+        return true;
+      });
+    }
+
+    // 5️⃣ Search Query Filter
+    if (search && search.trim().length > 0) {
+      const sTerm = search.trim().toLowerCase();
+      filteredPrograms = filteredPrograms.filter((prog) => {
+        const title = (prog.title || "").toLowerCase();
+        const desc = (prog.description || "").toLowerCase();
+        const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
+        const uniName = (uniObj?.name || "").toLowerCase();
+        return title.includes(sTerm) || desc.includes(sTerm) || uniName.includes(sTerm);
+      });
+    }
+
+    const totalCount = filteredPrograms.length;
+    const limit = limitNum > 0 ? limitNum : totalCount || 10;
+    const paginatedPrograms = filteredPrograms.slice(skipNum, skipNum + limit);
+    const totalPages = limit > 0 ? Math.ceil(totalCount / limit) : 1;
 
     return reply.code(200).send({
       success: true,
       result: {
-        programs,
+        programs: paginatedPrograms,
         total: totalCount,
         page: pageNum,
-        limit: limitNum,
+        limit,
         totalPages,
-        hasNextPage: limitNum > 0 && pageNum < totalPages,
+        hasNextPage: limit > 0 && pageNum < totalPages,
         hasPrevPage: pageNum > 1,
       },
     });
@@ -135,125 +292,78 @@ async function getWebsiteCourseBySlug(request, reply) {
       });
     }
 
-    // Try PartnerCourse first by its own slug
-    let partnerCourse = await PartnerCourse.findOne({ slug, removed: false })
-      .populate({
-        path: "course",
-        populate: [
-          {
-            path: "university",
-            select: "_id name slug logoSrc imageSrc description location approvals rating reviews",
-            populate: [
-              { path: "logoSrc", select: "_id name url alt" },
-              { path: "imageSrc", select: "_id name url alt" },
-            ],
-          },
-          { path: "logo", select: "_id name url alt" },
-          { path: "image", select: "_id name url alt" },
-          { path: "fee", select: "_id title amount currency slug" },
-        ],
-      })
-      .populate({
-        path: "category",
-        select: "_id name slug type title description logo logoSrc image imageSrc order",
-        populate: [
-          { path: "logo", select: "_id name url alt" },
-          { path: "logoSrc", select: "_id name url alt" },
-          { path: "imageSrc", select: "_id name url alt" },
-        ],
-      })
-      .populate({ path: "duration", select: "_id title slug months" })
-      .populate({ path: "eligibility", select: "_id title slug" })
-      .populate({ path: "tenant", select: "_id name slug logo" })
+    const slugify = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+
+    // 1. Try finding by slug directly
+    let courseDoc = await Course.findOne({ slug, removed: false })
+      .populate({ path: "categories", select: "_id name slug" })
+      .populate({ path: "logo", select: "_id name url alt" })
+      .populate({ path: "image", select: "_id name url alt" })
+      .populate({ path: "brochureUrl", select: "_id name url alt" })
+      .populate(populateOfferings)
       .lean();
 
-    // Fallback — find PartnerCourse by its linked Course slug
-    if (!partnerCourse) {
-      partnerCourse = await PartnerCourse.findOne({ removed: false })
-        .populate({
-          path: "course",
-          match: { slug },
-          populate: [
-            {
-              path: "university",
-              select: "_id name slug logoSrc imageSrc description location approvals rating reviews",
-              populate: [
-                { path: "logoSrc", select: "_id name url alt" },
-                { path: "imageSrc", select: "_id name url alt" },
-              ],
-            },
-            { path: "logo", select: "_id name url alt" },
-            { path: "image", select: "_id name url alt" },
-            { path: "fee", select: "_id title amount currency slug" },
-          ],
-        })
-        .populate({
-          path: "category",
-          select: "_id name slug type title description logo logoSrc image imageSrc order",
-          populate: [
-            { path: "logo", select: "_id name url alt" },
-            { path: "logoSrc", select: "_id name url alt" },
-            { path: "imageSrc", select: "_id name url alt" },
-          ],
-        })
-        .populate({ path: "duration", select: "_id title slug months" })
-        .populate({ path: "eligibility", select: "_id title slug" })
-        .populate({ path: "tenant", select: "_id name slug logo" })
+    let matchedSubcourseSlug = null;
+    let matchedOfferingIdx = 0;
+
+    // 2. If not found directly, look up all courses to match by subcourse/specialization title slug
+    if (!courseDoc) {
+      const allCourses = await Course.find({ removed: false })
+        .populate({ path: "categories", select: "_id name slug" })
+        .populate({ path: "logo", select: "_id name url alt" })
+        .populate({ path: "image", select: "_id name url alt" })
+        .populate({ path: "brochureUrl", select: "_id name url alt" })
+        .populate(populateOfferings)
         .lean();
 
-      // Discard if the course field didn't match (populate match returns null)
-      if (partnerCourse && !partnerCourse.course) partnerCourse = null;
+      for (const doc of allCourses) {
+        let matched = false;
+        if (doc.universityOfferings) {
+          for (let oIdx = 0; oIdx < doc.universityOfferings.length; oIdx++) {
+            const offering = doc.universityOfferings[oIdx];
+            if (offering.subcourses) {
+              for (const sub of offering.subcourses) {
+                // Match against subcourse title, subcourse ref slug/name, or category name
+                const candidates = [
+                  sub.title,
+                  sub.name,
+                  sub.subcourse?.title,
+                  sub.subcourse?.name,
+                  sub.subcourse?.slug,
+                  sub.category?.name,
+                ].filter(Boolean);
+
+                if (candidates.some(c => slugify(c) === slug || c === slug)) {
+                  matched = true;
+                  matchedOfferingIdx = oIdx;
+                  matchedSubcourseSlug = slugify(sub.title || sub.name || sub.subcourse?.title || slug);
+                  break;
+                }
+              }
+            }
+            if (matched) break;
+          }
+        }
+        if (matched) {
+          courseDoc = doc;
+          break;
+        }
+      }
     }
 
-    if (!partnerCourse) {
+    if (!courseDoc) {
       return reply.code(404).send({
         success: false,
         message: "Course not found",
       });
     }
 
-    const courseDoc = partnerCourse.course && typeof partnerCourse.course === "object"
-      ? partnerCourse.course
-      : {};
-
-    const title = partnerCourse.title || courseDoc.title || "Course Details";
-    const courseSlug = partnerCourse.slug || courseDoc.slug || slug;
-    const description = partnerCourse.description ||
-      "Comprehensive distance education program designed for executive career growth, practical industry skills, and leadership excellence.";
-
-    const universityObj = courseDoc.university || partnerCourse.university || null;
-    const durationObj = partnerCourse.duration;
-    const eligibilityObj = partnerCourse.eligibility;
-    const categoryObj = partnerCourse.category;
-
     return reply.code(200).send({
       success: true,
       result: {
-        _id: partnerCourse._id || courseDoc._id,
-        title,
-        slug: courseSlug,
-        description,
-        university: universityObj,
-        logo: partnerCourse.logo || courseDoc.logo || null,
-        image: partnerCourse.image || courseDoc.image || null,
-        fee: partnerCourse.fee || courseDoc.fee || null,
-        brochureUrl: partnerCourse.brochureUrl || courseDoc.brochureUrl || null,
-        duration: durationObj
-          ? typeof durationObj === "object" ? durationObj.title : durationObj
-          : null,
-        eligibility: eligibilityObj
-          ? typeof eligibilityObj === "object" ? eligibilityObj.title : eligibilityObj
-          : null,
-        level: categoryObj
-          ? typeof categoryObj === "object" ? categoryObj.name : categoryObj
-          : null,
-        syllabus:
-          partnerCourse.syllabus && partnerCourse.syllabus.length > 0
-            ? partnerCourse.syllabus
-            : courseDoc.syllabus && courseDoc.syllabus.length > 0
-            ? courseDoc.syllabus
-            : [],
-        careers: partnerCourse.careers || courseDoc.careers || null,
+        ...courseDoc,
+        activeOfferingIdx: matchedOfferingIdx,
+        activeSubcourseSlug: matchedSubcourseSlug,
       },
     });
   } catch (error) {

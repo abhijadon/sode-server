@@ -3,10 +3,8 @@
 const path = require("path");
 require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
 const mongoose = require("mongoose");
-const { PartnerCourse } = require("../model/PartnerCourse");
-const { University } = require("../model/University");
 const { Course } = require("../model/Course");
-const { Subcourse } = require("../model/Subcourse");
+const { University } = require("../model/University");
 const { Category } = require("../model/Category");
 const { Fee } = require("../model/Fee");
 const { Duration } = require("../model/Duration");
@@ -38,123 +36,87 @@ const master75Rows = [
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Data Science", domainCat: "Data Science", feeAmount: 650000, durationStr: "36 months" },
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Marketing", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
   { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Business Analytics", domainCat: "Data Science", feeAmount: 650000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - Finance", domainCat: "Finance", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - Marketing", domainCat: "Management", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - Leadership", domainCat: "Leadership", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - General", domainCat: "Management", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - Business Analytics", domainCat: "Data Science", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "DBA - Generative AI", domainCat: "AI Courses", feeAmount: 1065000, durationStr: "27 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Business Analytics Concentration", domainCat: "Data Science", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Industrial Organizational Psychology Concentration", domainCat: "HR", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Information Technology Management", domainCat: "Management", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Finance", domainCat: "Finance", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Marketing", domainCat: "Management", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - Adaptive Leadership", domainCat: "Leadership", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master", courseTitle: "MBA - General", domainCat: "Management", feeAmount: 1200000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Global and International Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Cybersecurity Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Human Resources Management", domainCat: "HR", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Tax Management", domainCat: "Finance", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Finance and Banking", domainCat: "Banking", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Marketing", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Operations Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Strategic Management", domainCat: "Leadership", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Entrepreneurship", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - IT Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Energy Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Health Care Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Data Science", domainCat: "Data Science", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Machine Learning", domainCat: "Machine Learning", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Finance", domainCat: "Finance", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - International Business Leadership", domainCat: "Leadership", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Global Supply Chain Management", domainCat: "Management", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - Accounting", domainCat: "Finance", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "DBA - AML Compliance", domainCat: "Finance", feeAmount: 750000, durationStr: "36 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Business Analytics", domainCat: "Data Science", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Finance", domainCat: "Finance", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Marketing", domainCat: "Management", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Leadership", domainCat: "Leadership", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Human Resource Management", domainCat: "HR", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Liverpool Business School", degreeLevel: "Master", courseTitle: "MBA - Operations and Supply Chain Management", domainCat: "Management", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Paris School of Business", degreeLevel: "Master", courseTitle: "MBA - Strategic Leadership", domainCat: "Leadership", feeAmount: 680000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Paris School of Business", degreeLevel: "Master", courseTitle: "MBA - AI and Technology", domainCat: "AI Courses", feeAmount: 680000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Paris School of Business", degreeLevel: "Master", courseTitle: "MBA - Finance", domainCat: "Finance", feeAmount: 680000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Paris School of Business", degreeLevel: "Master", courseTitle: "MBA - Marketing", domainCat: "Management", feeAmount: 680000, durationStr: "18 months" },
-  { rootCat: "Global Universities", uniName: "Paris School of Business", degreeLevel: "Master", courseTitle: "MBA - Operations and Supply Chain", domainCat: "Management", feeAmount: 680000, durationStr: "18 months" },
-  { rootCat: "IIT", uniName: "IIT Roorkee", degreeLevel: "Certification", courseTitle: "PG Certificate in Data Science, Machine Learning & Generative AI", domainCat: "Data Science", feeAmount: 175000, durationStr: "8 months" },
-  { rootCat: "IIT", uniName: "IIT Delhi", degreeLevel: "Certification", courseTitle: "Executive Programme in Advanced Project Management", domainCat: "Management", feeAmount: 129800, durationStr: "6 months" },
-  { rootCat: "IIT", uniName: "IIT Madras", degreeLevel: "Certification", courseTitle: "Advanced Certificate in Applied Artificial Intelligence & Deep Learning", domainCat: "Machine Learning", feeAmount: 194700, durationStr: "7 months" },
-  { rootCat: "IIM", uniName: "IIM Kozhikode", degreeLevel: "Certification", courseTitle: "Certificate Programme in Strategic AI for Business Professionals", domainCat: "AI Courses", feeAmount: 199000, durationStr: "6 months" },
-  { rootCat: "IIM", uniName: "IIM Bangalore", degreeLevel: "Certification", courseTitle: "Young Leaders Programme in General Management", domainCat: "Management", feeAmount: 292640, durationStr: "11 months" },
-  { rootCat: "IIM", uniName: "IIM Udaipur", degreeLevel: "Master", courseTitle: "MBA", domainCat: "Management", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "IIM", uniName: "IIM Lucknow", degreeLevel: "Master", courseTitle: "MBA", domainCat: "Management", feeAmount: 510000, durationStr: "18 months" },
-  { rootCat: "IIM", uniName: "IIM Nagpur", degreeLevel: "Certification", courseTitle: "Post Graduate Certificate Programme in Advanced HR Analytics", domainCat: "HR", feeAmount: 160000, durationStr: "7 months" },
-  { rootCat: "IIM", uniName: "IIM Indore", degreeLevel: "Certification", courseTitle: "Executive Programme in Sales and Marketing (EPSM)", domainCat: "Management", feeAmount: 200000, durationStr: "12 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", courseTitle: "Executive Programme in Generative AI for Leaders", domainCat: "AI Courses", feeAmount: 225000, durationStr: "5 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", courseTitle: "Executive Post Graduate Certificate Programme in Data Science & AI", domainCat: "Data Science", feeAmount: 180000, durationStr: "6 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", courseTitle: "Professional Certificate Programme in Data Science with Agentic AI", domainCat: "Data Science", feeAmount: 99000, durationStr: "6 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", courseTitle: "Executive Post Graduate Programme in Applied AI and Agentic AI", domainCat: "AI Courses", feeAmount: 140000, durationStr: "7 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Diploma", courseTitle: "Executive Diploma in Machine Learning & Artificial Intelligence", domainCat: "Machine Learning", feeAmount: 310000, durationStr: "12 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", courseTitle: "Chief Technology Officer & AI Leadership Programme", domainCat: "Leadership", feeAmount: 365000, durationStr: "6 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Master", courseTitle: "Master of Science in Machine Learning & Artificial Intelligence", domainCat: "Machine Learning", feeAmount: 535000, durationStr: "18 months" },
-  { rootCat: "Other", uniName: "IIIT Bangalore", degreeLevel: "Master", courseTitle: "Master of Science in Data Science", domainCat: "Data Science", feeAmount: 485000, durationStr: "18 months" },
-  { rootCat: "Other", uniName: "XLRI Jamshedpur", degreeLevel: "Certification", courseTitle: "Executive Development Programme in Human Resource Management", domainCat: "HR", feeAmount: 180000, durationStr: "6-7 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Clinical Research", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Quality Management", domainCat: "Management", feeAmount: 650000, durationStr: "36 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Accounting", domainCat: "Finance", feeAmount: 650000, durationStr: "36 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Doctorate", courseTitle: "DBA - Information Technology", domainCat: "IT", feeAmount: 650000, durationStr: "36 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Master Degree", courseTitle: "MSc - Higher European Degree", domainCat: "Management", feeAmount: 325000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Master Degree", courseTitle: "MSc - Clinical Research", domainCat: "Management", feeAmount: 325000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "Rushford Business School", degreeLevel: "Master Degree", courseTitle: "MSc - Health Economics", domainCat: "Management", feeAmount: 325000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "AURA International School of Management", degreeLevel: "Master Degree", courseTitle: "Online Masters in Data Science", domainCat: "Data Science", feeAmount: 250000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "AURA International School of Management", degreeLevel: "Master Degree", courseTitle: "Online Masters in Artificial Intelligence", domainCat: "AI", feeAmount: 250000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "AURA International School of Management", degreeLevel: "Executive PG", courseTitle: "Online Executive Masters in Cybersecurity", domainCat: "IT", feeAmount: 250000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "Online Global DBA", domainCat: "Management", feeAmount: 850000, durationStr: "24 months" },
+  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Doctorate", courseTitle: "Online Executive DBA", domainCat: "Leadership", feeAmount: 990000, durationStr: "24 months" },
+  { rootCat: "Global Universities", uniName: "SSBM Geneva", degreeLevel: "Executive PG", courseTitle: "Executive MBA", domainCat: "Management", feeAmount: 450000, durationStr: "12 months" },
+  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Master Degree", courseTitle: "Master of Science in Business Analytics (MSBA)", domainCat: "Data Science", feeAmount: 1050000, durationStr: "15 months" },
+  { rootCat: "Global Universities", uniName: "Golden Gate University", degreeLevel: "Doctorate", courseTitle: "Doctor of Business Administration (DBA)", domainCat: "Management", feeAmount: 1350000, durationStr: "36 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Ahmedabad", degreeLevel: "Executive PG", courseTitle: "Senior Management Programme (SMP)", domainCat: "Leadership", feeAmount: 825000, durationStr: "12 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Ahmedabad", degreeLevel: "Executive PG", courseTitle: "Chief Technology Officer Programme (CTO)", domainCat: "Technology", feeAmount: 950000, durationStr: "12 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Kozhikode", degreeLevel: "Executive PG", courseTitle: "Executive Post Graduate Programme in Management (EPGP)", domainCat: "Management", feeAmount: 1400000, durationStr: "24 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Kozhikode", degreeLevel: "Executive PG", courseTitle: "Senior Management Programme (SMP)", domainCat: "Leadership", feeAmount: 650000, durationStr: "12 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Kozhikode", degreeLevel: "Executive Certificate", courseTitle: "Professional Certificate Programme in Data Science", domainCat: "Data Science", feeAmount: 225000, durationStr: "8 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Calcutta", degreeLevel: "Executive PG", courseTitle: "Executive Programme in Business Analytics (EPBA)", domainCat: "Data Science", feeAmount: 680000, durationStr: "12 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Calcutta", degreeLevel: "Executive Certificate", courseTitle: "Executive Programme in Leadership & Management (EPLM)", domainCat: "Leadership", feeAmount: 590000, durationStr: "12 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Lucknow", degreeLevel: "Executive Certificate", courseTitle: "Executive Programme in Data Science & AI", domainCat: "AI", feeAmount: 295000, durationStr: "9 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Lucknow", degreeLevel: "Executive Certificate", courseTitle: "Executive Programme in Finance for Senior Executives", domainCat: "Finance", feeAmount: 340000, durationStr: "9 months" },
+  { rootCat: "IIM Courses", uniName: "IIM Indore", degreeLevel: "Executive Certificate", courseTitle: "Post Graduate Certificate Programme in Management (PGCPM)", domainCat: "Management", feeAmount: 420000, durationStr: "12 months" },
+  { rootCat: "Top IIT Courses", uniName: "IIT Delhi", degreeLevel: "Executive Certificate", courseTitle: "Certificate Programme in Data Science & Machine Learning", domainCat: "Data Science", feeAmount: 165000, durationStr: "6 months" },
+  { rootCat: "Top IIT Courses", uniName: "IIT Delhi", degreeLevel: "Executive Certificate", courseTitle: "Executive Programme in Supply Chain & Operations", domainCat: "Operations", feeAmount: 185000, durationStr: "6 months" },
+  { rootCat: "Top IIT Courses", uniName: "IIT Bombay", degreeLevel: "Executive Certificate", courseTitle: "Certificate Programme in Machine Learning & AI", domainCat: "AI", feeAmount: 210000, durationStr: "8 months" },
+  { rootCat: "Top IIT Courses", uniName: "IIT Madras", degreeLevel: "Bachelor Degree", courseTitle: "BS Degree in Data Science & Applications", domainCat: "Data Science", feeAmount: 345000, durationStr: "36 months" },
+  { rootCat: "Top IIT Courses", uniName: "IIT Roorkee", degreeLevel: "Executive Certificate", courseTitle: "Advanced Certificate in Full Stack Software Development", domainCat: "Software", feeAmount: 150000, durationStr: "10 months" },
+  { rootCat: "Executive Education", uniName: "ISB Hyderabad", degreeLevel: "Executive PG", courseTitle: "Post Graduate Programme in Management for Senior Executives (PGPMAX)", domainCat: "Leadership", feeAmount: 4200000, durationStr: "15 months" },
+  { rootCat: "Executive Education", uniName: "ISB Hyderabad", degreeLevel: "Executive Certificate", courseTitle: "Advanced Management Programme in Business Analytics (AMPBA)", domainCat: "Data Science", feeAmount: 1050000, durationStr: "12 months" },
+  { rootCat: "Executive Education", uniName: "XLRI Jamshedpur", degreeLevel: "Executive Certificate", courseTitle: "Post Graduate Certificate in Business Management (PGCBM)", domainCat: "Management", feeAmount: 400000, durationStr: "12 months" },
+  { rootCat: "Executive Education", uniName: "XLRI Jamshedpur", degreeLevel: "Executive Certificate", courseTitle: "Post Graduate Certificate in Human Resource Management (PGCHRM)", domainCat: "HR", feeAmount: 400000, durationStr: "12 months" },
+  { rootCat: "Executive Education", uniName: "SPJIMR Mumbai", degreeLevel: "Executive PG", courseTitle: "Post Graduate Executive Management Programme (PGEMP)", domainCat: "Management", feeAmount: 950000, durationStr: "21 months" },
+  { rootCat: "Executive Education", uniName: "MDI Gurgaon", degreeLevel: "Executive PG", courseTitle: "Post Graduate Diploma in Management (PGDM - Executive)", domainCat: "Management", feeAmount: 1180000, durationStr: "18 months" },
+  { rootCat: "Online Degree Courses", uniName: "Jain University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Business Administration (MBA)", domainCat: "Management", feeAmount: 150000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Jain University Online", degreeLevel: "Bachelor Degree", courseTitle: "Online Bachelor of Computer Applications (BCA)", domainCat: "IT", feeAmount: 120000, durationStr: "36 months" },
+  { rootCat: "Online Degree Courses", uniName: "Jain University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Computer Applications (MCA)", domainCat: "IT", feeAmount: 140000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Manipal University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Business Administration (MBA)", domainCat: "Management", feeAmount: 175000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Manipal University Online", degreeLevel: "Bachelor Degree", courseTitle: "Online Bachelor of Business Administration (BBA)", domainCat: "Management", feeAmount: 135000, durationStr: "36 months" },
+  { rootCat: "Online Degree Courses", uniName: "Manipal University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Commerce (M.Com)", domainCat: "Finance", feeAmount: 100000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Amity University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Business Administration (MBA)", domainCat: "Management", feeAmount: 199000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Amity University Online", degreeLevel: "Bachelor Degree", courseTitle: "Online Bachelor of Computer Applications (BCA)", domainCat: "IT", feeAmount: 145000, durationStr: "36 months" },
+  { rootCat: "Online Degree Courses", uniName: "Amity University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Science in Data Science (M.Sc)", domainCat: "Data Science", feeAmount: 220000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Chandigarh University Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Business Administration (MBA)", domainCat: "Management", feeAmount: 140000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "Chandigarh University Online", degreeLevel: "Bachelor Degree", courseTitle: "Online Bachelor of Computer Applications (BCA)", domainCat: "IT", feeAmount: 110000, durationStr: "36 months" },
+  { rootCat: "Online Degree Courses", uniName: "NMIMS Distance Learning", degreeLevel: "Master Degree", courseTitle: "Master of Business Administration (Distance MBA)", domainCat: "Management", feeAmount: 196000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "NMIMS Distance Learning", degreeLevel: "Executive PG", courseTitle: "Post Graduate Diploma in Management (PGDM)", domainCat: "Management", feeAmount: 180000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "LPU Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Business Administration (MBA)", domainCat: "Management", feeAmount: 136000, durationStr: "24 months" },
+  { rootCat: "Online Degree Courses", uniName: "LPU Online", degreeLevel: "Master Degree", courseTitle: "Online Master of Computer Applications (MCA)", domainCat: "IT", feeAmount: 128000, durationStr: "24 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "UpGrad Education", degreeLevel: "Executive PG", courseTitle: "Executive PG Diploma in Data Science", domainCat: "Data Science", feeAmount: 325000, durationStr: "12 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "UpGrad Education", degreeLevel: "Executive PG", courseTitle: "Executive PG Diploma in Full Stack Development", domainCat: "Software", feeAmount: 275000, durationStr: "11 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "Simplilearn", degreeLevel: "Executive Certificate", courseTitle: "Post Graduate Program in Data Science", domainCat: "Data Science", feeAmount: 215000, durationStr: "11 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "Simplilearn", degreeLevel: "Executive Certificate", courseTitle: "Post Graduate Program in Cloud Computing", domainCat: "Cloud", feeAmount: 195000, durationStr: "9 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "Great Learning", degreeLevel: "Executive PG", courseTitle: "PG Program in Artificial Intelligence & Machine Learning", domainCat: "AI", feeAmount: 325000, durationStr: "12 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "Great Learning", degreeLevel: "Executive PG", courseTitle: "PG Program in Management (Executive)", domainCat: "Management", feeAmount: 350000, durationStr: "12 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "INSEAD Online", degreeLevel: "Executive Certificate", courseTitle: "INSEAD Online Executive Leadership Programme", domainCat: "Leadership", feeAmount: 480000, durationStr: "6 months" },
+  { rootCat: "Certifications & Upskilling", uniName: "Wharton Online", degreeLevel: "Executive Certificate", courseTitle: "Leadership & Management Certificate Program", domainCat: "Leadership", feeAmount: 390000, durationStr: "4 months" },
 ];
 
-function extractSubcourseTitle(fullTitle) {
-  const line = fullTitle.trim();
-  if (line.includes("-")) {
-    const parts = line.split("-");
-    return parts.slice(1).join("-").trim();
-  }
-  return line;
-}
-
-function extractParentCourseSlug(fullTitle) {
-  const t = fullTitle.trim();
-  if (t.startsWith("MBA + DBA")) return "mba-dba";
-  if (t.startsWith("MBA")) return "mba";
-  if (t.startsWith("DBA") || t.includes("DBA")) return "dba";
-  if (t.includes("Data Science") || t.includes("Machine Learning") || t.includes("AI")) return "pg-certificate-data-science-ml-genai";
-  if (t.includes("Project Management")) return "executive-programme-advanced-project-management";
-  if (t.includes("Sales and Marketing")) return "executive-programme-sales-marketing-epsm";
-  if (t.includes("Human Resource")) return "executive-development-programme-hr-management";
-  return "mba";
-}
-
-async function seedPartnerCoursesMaster() {
+async function seedUnifiedCoursesMaster() {
   try {
     console.log("🚀 Connecting to MongoDB...");
     await mongoose.connect(MONGODB_URI);
     console.log("🍃 MongoDB connected successfully.");
 
-    console.log("🧹 Clearing old PartnerCourse collection...");
-    try {
-      await mongoose.connection.db.collection("partnercourses").dropIndexes();
-    } catch (e) { }
-
-    const resPartner = await PartnerCourse.deleteMany({});
-    console.log(`🗑️ Deleted ${resPartner.deletedCount} items from PartnerCourse model.`);
-    console.log("✨ PartnerCourse model is now clean!");
+    console.log("🧹 Clearing existing Course collection...");
+    await Course.deleteMany({});
+    console.log("✨ Course collection cleared!");
 
     // Fetch lookups
     const universities = await University.find({});
-    const courses = await Course.find({});
-    const subcourses = await Subcourse.find({});
     const categories = await Category.find({});
     const fees = await Fee.find({});
     const durations = await Duration.find({});
 
-    console.log(`📊 Lookups: ${universities.length} Unis, ${courses.length} Courses, ${subcourses.length} Subcourses, ${categories.length} Cats, ${fees.length} Fees, ${durations.length} Durations.`);
+    console.log(`📊 Lookups: ${universities.length} Unis, ${categories.length} Cats, ${fees.length} Fees, ${durations.length} Durations.`);
 
     const uniMap = new Map();
     universities.forEach((u) => uniMap.set(u.slug, u._id));
-
-    const courseMap = new Map();
-    courses.forEach((c) => courseMap.set(c.slug, c._id));
-
-    const subcourseMap = new Map();
-    subcourses.forEach((s) => subcourseMap.set(s.slug, s._id));
 
     const catMap = new Map();
     categories.forEach((c) => catMap.set(c.slug, c._id));
@@ -167,20 +129,9 @@ async function seedPartnerCoursesMaster() {
 
     let order = 1;
     for (const row of master75Rows) {
-      // 1. University
       const uniSlug = slugify(row.uniName);
       const uniId = uniMap.get(uniSlug) || null;
 
-      // 2. Course
-      const parentCourseSlug = extractParentCourseSlug(row.courseTitle);
-      const courseId = courseMap.get(parentCourseSlug) || courses[0]?._id;
-
-      // 3. Subcourse
-      const subTitle = extractSubcourseTitle(row.courseTitle);
-      const subSlug = slugify(subTitle);
-      const subcourseId = subcourseMap.get(subSlug) || null;
-
-      // 4. Categories (Degree level + Domain + Root Category)
       const degreeSlug = slugify(row.degreeLevel);
       const degreeCatId = catMap.get(degreeSlug) || null;
 
@@ -192,40 +143,36 @@ async function seedPartnerCoursesMaster() {
 
       const categoryIds = [degreeCatId, domainCatId, rootCatId].filter(Boolean);
 
-      // 5. Fee
       const feeId = feeMap.get(row.feeAmount) || null;
 
-      // 6. Duration
       const durSlug = slugify(row.durationStr);
       const durationId = durationMap.get(durSlug) || null;
 
-      const slug = `${slugify(row.uniName)}-${slugify(row.courseTitle)}-${order}`;
+      const slug = `${slugify(row.uniName)}-${slugify(row.courseTitle)}`;
 
-      const partnerDoc = await PartnerCourse.create({
+      const courseDoc = await Course.create({
         title: `${row.uniName} - ${row.courseTitle}`,
         slug: slug,
-        university: uniId,
-        course: courseId,
-        subcourse: subcourseId,
-        category: degreeCatId || domainCatId || categoryIds[0] || null,
+        university: uniId ? [uniId] : [],
         categories: categoryIds,
         fee: feeId,
         duration: durationId,
+        description: `${row.courseTitle} offered by ${row.uniName} in ${row.domainCat}. Degree Level: ${row.degreeLevel}.`,
         order: order++,
         featured: true,
         enabled: true,
       });
 
-      console.log(`✅ Seeded PartnerCourse #${order - 1}: "${partnerDoc.title}" | Uni: ${row.uniName} | Fee: ₹${row.feeAmount.toLocaleString("en-IN")} | Dur: ${row.durationStr}`);
+      console.log(`✅ Seeded Course #${order - 1}: "${courseDoc.title}" | Uni: ${row.uniName} | Fee: ₹${row.feeAmount.toLocaleString("en-IN")} | Dur: ${row.durationStr}`);
     }
 
-    console.log(`\n🎉 Successfully seeded ALL ${master75Rows.length} master course offerings into PartnerCourse collection!`);
+    console.log(`\n🎉 Successfully seeded ALL ${master75Rows.length} courses directly into unified Course collection!`);
   } catch (error) {
-    console.error("❌ Error in seedPartnerCoursesMaster:", error);
+    console.error("❌ Error in seedUnifiedCoursesMaster:", error);
   } finally {
     await mongoose.disconnect();
     console.log("🔌 MongoDB disconnected.");
   }
 }
 
-seedPartnerCoursesMaster();
+seedUnifiedCoursesMaster();

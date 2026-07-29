@@ -1,6 +1,7 @@
 "use strict";
 
 const jwt = require("jsonwebtoken");
+const mongoose = require("mongoose");
 const { User } = require("../../model/User");
 
 // ✅ Helper to extract token from Header (Bearer) or Cookie (token)
@@ -60,12 +61,14 @@ const authenticate = async (request, reply) => {
       });
     }
 
-    // 3️⃣ Fetch User from DB with populated Role
+    // 3️⃣ Fetch User from DB with populated Role and Workspace (for tenantId extraction)
     const user = await User.findOne({
       _id: decoded.id,
       removed: false,
       enabled: true,
-    }).populate("role");
+    })
+      .populate("role")
+      .populate("workspace", "_id name tenantId");
 
     if (!user) {
       return reply.code(401).send({
@@ -78,6 +81,18 @@ const authenticate = async (request, reply) => {
 
     const roleId = user.role?._id ? String(user.role._id) : user.role ? String(user.role) : null;
     const roleName = user.role?.name || "Member";
+
+    // Derive all tenantIds from user's assigned workspaces (workspace.tenantId is an array)
+    const tenantIds = [];
+    (user.workspace || []).forEach((ws) => {
+      const tIds = Array.isArray(ws?.tenantId) ? ws.tenantId : [];
+      tIds.forEach((tid) => {
+        const s = String(tid);
+        if (mongoose.Types.ObjectId.isValid(s) && !tenantIds.includes(s)) {
+          tenantIds.push(s);
+        }
+      });
+    });
 
     // ✅ request.user populated cleanly with roleId and roleName
     request.user = {
@@ -94,8 +109,12 @@ const authenticate = async (request, reply) => {
       role: user.role,
       roles: user.role ? [user.role] : [],
       workspace: user.workspace || [],
-      tenantId: user.tenantId ? String(user.tenantId) : null,
+      tenantIds,          // all tenantIds from all assigned workspaces
       reportsTo: user.reportsTo ? String(user.reportsTo) : null,
+      // Per-workspace permission overrides from the assigned role
+      workspacePermissions: Array.isArray(user.role?.workspace)
+        ? user.role.workspace
+        : [],
     };
 
     // Update lastSeen and online status in background

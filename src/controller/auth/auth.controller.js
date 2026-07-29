@@ -60,7 +60,9 @@ const login = async (request, reply) => {
     const user = await User.findOne({
       $or: [{ username }, { email: username }, { phone: username }],
       removed: false,
-    }).populate("role");
+    })
+      .populate("role")                         // role.workspace sub-docs included
+      .populate("workspace", "_id name tenantId"); // for tenantId extraction
 
     if (user && user.enabled === false) {
       return reply.code(403).send({
@@ -131,9 +133,22 @@ const login = async (request, reply) => {
     }
 
     const primaryRole = user.role?.name || "Member";
+    // Global default permissions
     const permissions = Array.isArray(user.role?.action)
       ? user.role.action
       : ["read"];
+    // Per-workspace permission overrides
+    const workspacePermissions = Array.isArray(user.role?.workspace)
+      ? user.role.workspace
+      : [];
+    // All tenantIds from user's workspaces (workspace.tenantId is an array)
+    const tenantIds = [];
+    (user.workspace || []).forEach((ws) => {
+      (Array.isArray(ws?.tenantId) ? ws.tenantId : []).forEach((tid) => {
+        const s = String(tid);
+        if (!tenantIds.includes(s)) tenantIds.push(s);
+      });
+    });
 
     // 🎯 प्योर JWT जनरेशन (बिना सेशन आईडी के)
     const accessToken = await generateAccessToken(user, primaryRole);
@@ -183,7 +198,9 @@ const login = async (request, reply) => {
           isSubadmin: user.isSubadmin,
           isOwner: user.isOwner,
           workspace: user.workspace,
-          permissions,
+          permissions,           // global default actions
+          workspacePermissions,  // per-workspace action overrides
+          tenantIds,             // all tenantIds from assigned workspaces
         },
         accessToken,
       },

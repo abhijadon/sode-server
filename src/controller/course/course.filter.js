@@ -1,20 +1,16 @@
 "use strict";
 
 /**
- * course.filter.js — Fastify Prehandler Middleware
+ * course.filter.js — Comprehensive Prehandler Filter Middleware
  *
- * Resolves all query params into a ready-made Mongoose `partnerFilter` object
- * and attaches it to `request.courseFilter` so the controller just runs the DB query.
- *
- * Usage (in route):
- *   { preHandler: buildCourseFilter, handler: getWebsiteCourses }
+ * Strictly separates Main Degree Categories (category) and Subcategories /
+ * Specializations (subcategory & subcourse).
  */
 
 const mongoose = require("mongoose");
 const { Category } = require("../../model/Category");
-const { Subcourse } = require("../../model/Subcourse");
 const { University } = require("../../model/University");
-const { Course } = require("../../model/Course");
+const { Subcourse } = require("../../model/Subcourse");
 const { Duration } = require("../../model/Duration");
 const { Fee } = require("../../model/Fee");
 
@@ -35,199 +31,184 @@ async function buildCourseFilter(request, reply) {
   } = request.query || {};
 
   const partnerFilter = { removed: false, enabled: true };
+  const andConditions = [];
 
-  // ─── 1️⃣ Category & Subcategory Hierarchical Filter ───────────────────────
-  const categoryParam = category && category !== "all" ? category : null;
-  const subcategoryParam =
-    (subcategory || subcourse) &&
-    subcategory !== "all" &&
-    subcourse !== "all"
-      ? subcategory || subcourse
-      : null;
+  // Helper to split multi-value params by comma or pipe
+  const splitValues = (param) => {
+    if (!param || param === "all") return [];
+    return String(param)
+      .split(/[,|]/)
+      .map((s) => s.trim().toLowerCase())
+      .filter(Boolean);
+  };
 
-  if (categoryParam || subcategoryParam) {
-    let parentCatIds = [];
-    let subCatIds = [];
+  // List of recognized Main Degree Category slugs & prefixes
+  const MAIN_DEGREE_SLUGS = new Set([
+    "doctorate",
+    "master",
+    "bachelor",
+    "certification",
+    "diploma",
+    "dual",
+    "executive",
+    "phd",
+    "mba",
+    "dba",
+    "bba",
+    "msc",
+    "bsc",
+    "ma",
+    "ba",
+    "pgd",
+  ]);
 
-    // A. Resolve Parent Category IDs
-    if (categoryParam) {
-      const parts = String(categoryParam).split("-");
-      const prefix = parts[0];
+  // ─── 1️⃣ Main Category Filter (e.g. category=doctorate) ────────────────────
+  // Matches ONLY Main Degree Categories (e.g. Doctorate, Master, Bachelor, Certification, Diploma)
+  async function resolveMainCategoryTokens(tokens) {
+    if (!tokens || tokens.length === 0) return null;
 
-      const parentCats = await Category.find({
+    let catIds = [];
+
+    for (const rawToken of tokens) {
+      const stripped = rawToken.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
+
+      // Ensure token refers to a recognized Main Degree Category or Main Type
+      const isMainDegree =
+        MAIN_DEGREE_SLUGS.has(rawToken) ||
+        MAIN_DEGREE_SLUGS.has(stripped) ||
+        mongoose.Types.ObjectId.isValid(rawToken);
+
+      if (!isMainDegree) {
+        // If a topic subcategory (e.g. ai-courses, finance, hr) was passed in category param, do not treat as main category
+        continue;
+      }
+
+      // Find matching Main Categories for the specific token
+      const mainCatDocs = await Category.find({
         removed: false,
         $or: [
-          { slug: categoryParam },
-          { slug: prefix },
-          { name: new RegExp(`^${prefix}$`, "i") },
-          { name: new RegExp(prefix.replace(/-/g, " "), "i") },
-          ...(mongoose.Types.ObjectId.isValid(categoryParam)
-            ? [{ _id: categoryParam }]
-            : []),
+          { slug: rawToken },
+          { slug: stripped },
+          { slug: `browse-${stripped}` },
+          { name: new RegExp(`^${stripped.replace(/-/g, " ")}$`, "i") },
+          ...(mongoose.Types.ObjectId.isValid(rawToken) ? [{ _id: rawToken }] : []),
         ],
-      })
-        .select("_id parentId")
-        .lean();
-
-      for (const cat of parentCats) {
-        if (Array.isArray(cat.parentId) && cat.parentId.length > 0) {
-          parentCatIds.push(...cat.parentId);
-        } else if (cat.parentId && !Array.isArray(cat.parentId)) {
-          parentCatIds.push(cat.parentId); // legacy single ObjectId
-        } else {
-          parentCatIds.push(cat._id); // root category → use itself
-        }
-      }
-
-      // Compound slug handling (e.g. "certification-ai-courses")
-      if (!subcategoryParam && parts.length > 1) {
-        const stripped = categoryParam.replace(
-          /^(diploma|certification|master|doctorate|browse)-/,
-          ""
-        );
-        const subDocs = await Category.find({
-          removed: false,
-          $or: [
-            { slug: categoryParam },
-            { slug: stripped },
-            { slug: `browse-${stripped}` },
-            { slug: `${prefix}-${stripped}` },
-            { name: new RegExp(`^${stripped.replace(/-/g, " ")}$`, "i") },
-          ],
-        })
-          .select("_id")
-          .lean();
-        subCatIds.push(...subDocs.map((s) => s._id));
-      }
-    }
-
-    // B. Resolve Subcategory IDs
-    if (subcategoryParam) {
-      const terms = String(subcategoryParam)
-        .split(",")
-        .map((t) => t.trim());
-      const mainPrefix = categoryParam
-        ? String(categoryParam).split("-")[0]
-        : "";
-
-      for (const term of terms) {
-        const stripped = term.replace(
-          /^(diploma|certification|master|doctorate|browse)-/,
-          ""
-        );
-        const termRegex = new RegExp(
-          `^${term
-            .replace(/-/g, " ")
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-          "i"
-        );
-        const strippedRegex = new RegExp(
-          `^${stripped
-            .replace(/-/g, " ")
-            .replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`,
-          "i"
-        );
-
-        const subDocs = await Category.find({
-          removed: false,
-          $or: [
-            { slug: term },
-            { slug: stripped },
-            { slug: `browse-${stripped}` },
-            ...(mainPrefix ? [{ slug: `${mainPrefix}-${stripped}` }] : []),
-            { name: termRegex },
-            { name: strippedRegex },
-            ...(mongoose.Types.ObjectId.isValid(term) ? [{ _id: term }] : []),
-          ],
-        })
-          .select("_id")
-          .lean();
-
-        subCatIds.push(...subDocs.map((s) => s._id));
-      }
-    }
-
-    // C. Apply filter criteria
-    if (categoryParam && parentCatIds.length === 0) {
-      partnerFilter._id = null; // unknown category → 0 results
-    } else if (subcategoryParam && subCatIds.length === 0) {
-      partnerFilter._id = null; // unknown subcategory → 0 results
-    } else if (parentCatIds.length > 0 && subCatIds.length > 0) {
-      partnerFilter.$and = [
-        {
-          $or: [
-            { category: { $in: parentCatIds } },
-            { categories: { $in: parentCatIds } },
-          ],
-        },
-        { categories: { $in: subCatIds } },
-      ];
-    } else if (parentCatIds.length > 0) {
-      const childCats = await Category.find({
-        removed: false,
-        parentId: { $in: parentCatIds },
       })
         .select("_id")
         .lean();
 
-      const allCatIds = [...parentCatIds, ...childCats.map((c) => c._id)];
+      const matchedIds = mainCatDocs.map((c) => c._id);
+      catIds.push(...matchedIds);
 
-      partnerFilter.$or = [
-        { category: { $in: parentCatIds } },
-        { categories: { $in: allCatIds } },
-      ];
-    } else if (subCatIds.length > 0) {
-      partnerFilter.categories = { $in: subCatIds };
+      // Include child subcategories under these main categories
+      if (matchedIds.length > 0) {
+        const childDocs = await Category.find({
+          removed: false,
+          parentId: { $in: matchedIds },
+        })
+          .select("_id")
+          .lean();
+        catIds.push(...childDocs.map((c) => c._id));
+      }
     }
+
+    // If no valid main degree category matched, force 0 results
+    if (catIds.length === 0) return { _id: null };
+
+    return { categories: { $in: catIds } };
   }
 
-  // ─── 2️⃣ Subcourse Filter ─────────────────────────────────────────────────
-  if (subcourse && subcourse !== "all") {
-    const subSlugs = String(subcourse)
-      .split(",")
-      .map((s) => s.trim());
-    const subDocs = await Subcourse.find({
-      removed: false,
-      $or: [
-        { slug: { $in: subSlugs } },
-        {
-          title: {
-            $in: subSlugs.map((s) => new RegExp(s.replace(/-/g, " "), "i")),
-          },
-        },
-        {
-          name: {
-            $in: subSlugs.map((s) => new RegExp(s.replace(/-/g, " "), "i")),
-          },
-        },
-        ...subSlugs
-          .filter((s) => mongoose.Types.ObjectId.isValid(s))
-          .map((s) => ({ _id: s })),
-      ],
-    })
-      .select("_id")
-      .lean();
+  // ─── 2️⃣ Subcategory & Specialization Filter (e.g. subcategory=ai-courses) ──
+  // Matches Subcategories (topic categories) and Subcourses
+  async function resolveSubcategoryTokens(tokens) {
+    if (!tokens || tokens.length === 0) return null;
 
-    if (subDocs && subDocs.length > 0) {
-      partnerFilter.subcourse = { $in: subDocs.map((sd) => sd._id) };
+    let subCatIds = [];
+    let subcourseIds = [];
+
+    for (const rawToken of tokens) {
+      const stripped = rawToken.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
+
+      // Find matching Subcategories
+      const subCatDocs = await Category.find({
+        removed: false,
+        $or: [
+          { slug: rawToken },
+          { slug: stripped },
+          { slug: `browse-${stripped}` },
+          { name: new RegExp(`^${stripped.replace(/-/g, " ")}$`, "i") },
+          ...(mongoose.Types.ObjectId.isValid(rawToken) ? [{ _id: rawToken }] : []),
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      subCatIds.push(...subCatDocs.map((c) => c._id));
+
+      // Find matching Subcourses
+      const subDocs = await Subcourse.find({
+        removed: false,
+        $or: [
+          { slug: rawToken },
+          { slug: stripped },
+          { title: new RegExp(stripped.replace(/-/g, " "), "i") },
+          ...(mongoose.Types.ObjectId.isValid(rawToken) ? [{ _id: rawToken }] : []),
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      subcourseIds.push(...subDocs.map((s) => s._id));
     }
+
+    const subConditions = [];
+    if (subCatIds.length > 0) {
+      subConditions.push({ categories: { $in: subCatIds } });
+      subConditions.push({ "universityOfferings.category": { $in: subCatIds } });
+    }
+    if (subcourseIds.length > 0) {
+      subConditions.push({ "universityOfferings.subcourses.subcourse": { $in: subcourseIds } });
+    }
+    for (const token of tokens) {
+      const sRegex = new RegExp(token.replace(/-/g, " "), "i");
+      subConditions.push({ "universityOfferings.subcourses.title": sRegex });
+    }
+
+    return subConditions.length > 0 ? { $or: subConditions } : { _id: null };
   }
 
-  // ─── 3️⃣ University Filter ────────────────────────────────────────────────
-  if (university && university !== "all") {
-    const uSlugs = String(university)
-      .split(",")
-      .map((u) => u.trim());
+  // ─── Execute Category Filters ─────────────────────────────────────────────
+  const catTokens = splitValues(category);
+  if (catTokens.length > 0) {
+    const mainCond = await resolveMainCategoryTokens(catTokens);
+    if (mainCond) andConditions.push(mainCond);
+  }
+
+  const subcatTokens = splitValues(subcategory);
+  if (subcatTokens.length > 0) {
+    const subcatCond = await resolveSubcategoryTokens(subcatTokens);
+    if (subcatCond) andConditions.push(subcatCond);
+  }
+
+  const subcourseTokens = splitValues(subcourse);
+  if (subcourseTokens.length > 0) {
+    const subcourseCond = await resolveSubcategoryTokens(subcourseTokens);
+    if (subcourseCond) andConditions.push(subcourseCond);
+  }
+
+  // ─── 3️⃣ University Filter ──────────────────────────────────────────────────
+  const uniTokens = splitValues(university);
+  if (uniTokens.length > 0) {
     const uniDocs = await University.find({
       removed: false,
       $or: [
-        { slug: { $in: uSlugs } },
+        { slug: { $in: uniTokens } },
         {
           name: {
-            $in: uSlugs.map((s) => new RegExp(s.replace(/-/g, " "), "i")),
+            $in: uniTokens.map((s) => new RegExp(s.replace(/-/g, " "), "i")),
           },
         },
-        ...uSlugs
+        ...uniTokens
           .filter((s) => mongoose.Types.ObjectId.isValid(s))
           .map((s) => ({ _id: s })),
       ],
@@ -236,77 +217,114 @@ async function buildCourseFilter(request, reply) {
       .lean();
 
     if (uniDocs && uniDocs.length > 0) {
-      partnerFilter.university = { $in: uniDocs.map((u) => u._id) };
+      const uniIds = uniDocs.map((u) => u._id);
+      andConditions.push({ "universityOfferings.university": { $in: uniIds } });
+    } else {
+      andConditions.push({ _id: null });
     }
   }
 
-  // ─── 4️⃣ Course Filter ────────────────────────────────────────────────────
-  if (course && course !== "all") {
-    const cTitles = String(course)
-      .split(",")
-      .map((c) => c.trim());
-    const courseDocs = await Course.find({
-      removed: false,
+  // ─── 4️⃣ Course Title / Slug Filter ────────────────────────────────────────
+  const courseTokens = splitValues(course);
+  if (courseTokens.length > 0) {
+    andConditions.push({
       $or: [
-        { slug: { $in: cTitles } },
+        { slug: { $in: courseTokens } },
         {
           title: {
-            $in: cTitles.map((t) => new RegExp(t.replace(/-/g, " "), "i")),
+            $in: courseTokens.map((t) => new RegExp(t.replace(/-/g, " "), "i")),
           },
         },
-        ...cTitles
+        ...courseTokens
           .filter((c) => mongoose.Types.ObjectId.isValid(c))
           .map((c) => ({ _id: c })),
       ],
-    })
-      .select("_id")
-      .lean();
-
-    if (courseDocs && courseDocs.length > 0) {
-      partnerFilter.course = { $in: courseDocs.map((cd) => cd._id) };
-    }
+    });
   }
 
-  // ─── 5️⃣ Duration Filter ──────────────────────────────────────────────────
-  if (duration && duration !== "all") {
+  // ─── 5️⃣ Duration Range Filter ─────────────────────────────────────────────
+  const durationTokens = splitValues(duration);
+  if (durationTokens.length > 0) {
+    const durationOr = [];
+
+    for (const durStr of durationTokens) {
+      if (durStr === "06-month" || durStr === "0-6-months" || durStr === "6-month" || durStr === "0-6") {
+        durationOr.push({ months: { $lte: 6 } });
+      } else if (durStr === "06-12-months" || durStr === "6-12-months" || durStr === "6-12") {
+        durationOr.push({ months: { $gte: 6, $lte: 12 } });
+      } else if (durStr === "12-36-months" || durStr === "12-36-month" || durStr === "12-36" || durStr === "3-years") {
+        durationOr.push({ months: { $gte: 12, $lte: 36 } });
+      }
+
+      durationOr.push({ slug: durStr });
+      durationOr.push({ title: new RegExp(durStr.replace(/-/g, " "), "i") });
+      if (mongoose.Types.ObjectId.isValid(durStr)) {
+        durationOr.push({ _id: durStr });
+      }
+    }
+
     const durationDocs = await Duration.find({
       removed: false,
-      $or: [
-        { slug: duration },
-        {
-          title: new RegExp(
-            duration.replace("-year", "").replace("-month", ""),
-            "i"
-          ),
-        },
-        ...(mongoose.Types.ObjectId.isValid(duration)
-          ? [{ _id: duration }]
-          : []),
-      ],
+      $or: durationOr,
     })
       .select("_id")
       .lean();
 
     if (durationDocs && durationDocs.length > 0) {
-      partnerFilter.duration = { $in: durationDocs.map((d) => d._id) };
+      const durIds = durationDocs.map((d) => d._id);
+      andConditions.push({
+        $or: [
+          { "universityOfferings.duration": { $in: durIds } },
+          { "universityOfferings.subcourses.duration": { $in: durIds } },
+        ],
+      });
+    } else {
+      andConditions.push({ _id: null });
     }
   }
 
-  // ─── 6️⃣ Fee Filter ───────────────────────────────────────────────────────
-  if (fee && fee !== "all") {
+  // ─── 6️⃣ Fee Range Filter ──────────────────────────────────────────────────
+  const feeTokens = splitValues(fee);
+  if (feeTokens.length > 0) {
+    const feeOr = [];
+
+    for (const feeStr of feeTokens) {
+      if (feeStr === "0-1-lakh" || feeStr === "0-100000" || feeStr === "1-lakh") {
+        feeOr.push({ amount: { $gt: 0, $lte: 100000 } });
+      } else if (feeStr === "1-2-lakh" || feeStr === "100000-200000") {
+        feeOr.push({ amount: { $gt: 100000, $lte: 200000 } });
+      } else if (feeStr === "2-5-lakh" || feeStr === "200000-500000") {
+        feeOr.push({ amount: { $gt: 200000, $lte: 500000 } });
+      } else if (feeStr === "5-10-lakh" || feeStr === "500000-1000000") {
+        feeOr.push({ amount: { $gt: 500000, $lte: 1000000 } });
+      } else if (feeStr === "above-10-lakh" || feeStr === "1000000+" || feeStr === "10-lakh+") {
+        feeOr.push({ amount: { $gt: 1000000 } });
+      }
+
+      feeOr.push({ slug: feeStr });
+      feeOr.push({ title: new RegExp(feeStr.replace(/-/g, " "), "i") });
+      if (mongoose.Types.ObjectId.isValid(feeStr)) {
+        feeOr.push({ _id: feeStr });
+      }
+    }
+
     const feeDocs = await Fee.find({
       removed: false,
-      $or: [
-        { slug: fee },
-        { title: new RegExp(fee.replace(/-/g, " "), "i") },
-        ...(mongoose.Types.ObjectId.isValid(fee) ? [{ _id: fee }] : []),
-      ],
+      $or: feeOr,
     })
       .select("_id")
       .lean();
 
     if (feeDocs && feeDocs.length > 0) {
-      partnerFilter.fee = { $in: feeDocs.map((f) => f._id) };
+      const feeIds = feeDocs.map((f) => f._id);
+      andConditions.push({
+        $or: [
+          { "universityOfferings.fee": { $in: feeIds } },
+          { "universityOfferings.subcourses.fee": { $in: feeIds } },
+        ],
+      });
+    } else {
+      andConditions.push({ _id: null });
     }
   }
 
@@ -318,10 +336,19 @@ async function buildCourseFilter(request, reply) {
   // ─── 8️⃣ Text Search ──────────────────────────────────────────────────────
   if (search && search.trim().length > 0) {
     const sRegex = new RegExp(search.trim(), "i");
-    partnerFilter.$or = [
-      { title: sRegex },
-      { description: sRegex },
-    ];
+    andConditions.push({
+      $or: [
+        { title: sRegex },
+        { description: sRegex },
+        { "universityOfferings.subcourses.title": sRegex },
+        { "universityOfferings.subcourses.content": sRegex },
+      ],
+    });
+  }
+
+  // Combine all conditions into Mongoose query
+  if (andConditions.length > 0) {
+    partnerFilter.$and = andConditions;
   }
 
   // ─── Sort Options ─────────────────────────────────────────────────────────
@@ -336,7 +363,6 @@ async function buildCourseFilter(request, reply) {
   const limitNum = Math.max(0, parseInt(limit, 10) || 0);
   const skipNum = limitNum > 0 ? (pageNum - 1) * limitNum : 0;
 
-  // Attach resolved values to request for the controller
   request.courseFilter = {
     partnerFilter,
     mSort,

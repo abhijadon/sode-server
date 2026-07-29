@@ -65,24 +65,33 @@ const populateMap = {
   ],
   course: [
     {
-      path: "category",
+      path: "categories",
       select: "name slug type",
     },
     {
-      path: "duration",
+      path: "universityOfferings.university",
+      select: "name slug logoSrc imageSrc workspaceId",
+      populate: [
+        { path: "logoSrc", select: "_id name url alt" },
+        { path: "imageSrc", select: "_id name url alt" },
+        { path: "workspaceId", select: "_id name description" },
+      ],
+    },
+    {
+      path: "universityOfferings.fee",
+      select: "title amount currency slug",
+    },
+    {
+      path: "universityOfferings.duration",
       select: "title slug months",
     },
     {
-      path: "eligibility",
+      path: "universityOfferings.eligibility",
       select: "title slug",
     },
     {
-      path: "university",
-      select: "name slug logoSrc imageSrc",
-    },
-    {
-      path: "fee",
-      select: "title amount currency slug",
+      path: "universityOfferings.subcourse",
+      select: "title name slug",
     },
     {
       path: "image",

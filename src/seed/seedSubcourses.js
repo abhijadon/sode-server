@@ -105,7 +105,7 @@ async function seedSubcourses() {
     console.log("🧹 Clearing old Subcourse collection...");
     try {
       await mongoose.connection.db.collection("subcourses").dropIndexes();
-    } catch (e) {}
+    } catch (e) { }
 
     const resSub = await Subcourse.deleteMany({});
     console.log(`🗑️ Deleted ${resSub.deletedCount} items from Subcourse model.`);

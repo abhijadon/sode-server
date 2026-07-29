@@ -67,10 +67,11 @@ const accesspermission = async (req, reply) => {
           .filter((id) => mongoose.Types.ObjectId.isValid(id))
       : [];
 
-    const tenantId =
-      req.user?.tenantId && mongoose.Types.ObjectId.isValid(req.user.tenantId)
-        ? String(req.user.tenantId)
-        : null;
+    // Collect all tenantIds from user's workspaces (workspace.tenantId is an array)
+    const tenantIds = Array.isArray(req.user?.tenantIds)
+      ? req.user.tenantIds
+          .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      : [];
 
     // Attach structured permission context to request
     req.userPermissionContext = {
@@ -78,8 +79,10 @@ const accesspermission = async (req, reply) => {
       isAdminOrOwner: Boolean(isAdminOrOwner),
       visibleUserIds,
       workspaceIds,
-      tenantId,
+      tenantIds,          // array — workspace.tenantId[] is now multi-tenant
       userRoles,
+      // Per-workspace permission overrides (role.workspace[])
+      workspacePermissions: req.user?.workspacePermissions || [],
     };
 
     return;

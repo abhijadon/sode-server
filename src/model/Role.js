@@ -15,11 +15,35 @@ const roleSchema = new mongoose.Schema(
       default: null,
       trim: true,
     },
+
+    // Global default permissions (applies when no workspace-specific entry matches)
     action: {
       type: [String],
-      default: ["read"],
       enum: ["create", "read", "update", "delete", "write"],
+      default: ["read"],
     },
+
+    // Per-workspace permissions — har workspace ki apni alag action list hogi
+    workspace: [
+      {
+        workspaceId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Workspace",
+          required: true,
+        },
+        action: {
+          type: [
+            {
+              type: String,
+              enum: ["create", "read", "update", "delete", "write"],
+            },
+          ],
+          default: ["read"],
+        },
+        _id: false, // Embedded sub-doc — alag _id ki zaroorat nahi
+      },
+    ],
+
     des: {
       type: String,
       default: null,

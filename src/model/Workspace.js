@@ -14,12 +14,12 @@ const workspaceSchema = new mongoose.Schema(
       index: true,
     },
 
-    tenantId: {
+    tenantId: [{
       type: mongoose.Schema.Types.ObjectId,
       ref: "Tenant",
       required: true,
       index: true,
-    },
+    }],
 
     name: {
       type: String,
@@ -35,7 +35,7 @@ const workspaceSchema = new mongoose.Schema(
 
     createdBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      ref: "User",
       default: null,
     },
   },

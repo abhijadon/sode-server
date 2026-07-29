@@ -70,7 +70,7 @@ const checkPermission = (requiredAction, options = {}) => {
           removed: false,
         })
           .select(
-            "_id name removed enabled action actions workspaces description des"
+            "_id name removed enabled action workspace des"
           )
           .lean();
 
@@ -125,18 +125,18 @@ const checkPermission = (requiredAction, options = {}) => {
             return true;
           }
 
-          // Check Workspace Specific Permissions
+          // Check Workspace-specific Permissions (new schema: role.workspace[{workspaceId, action}])
           if (
             workspaceId &&
-            Array.isArray(role.workspaces) &&
-            role.workspaces.length > 0
+            Array.isArray(role.workspace) &&
+            role.workspace.length > 0
           ) {
-            const workspaceEntry = role.workspaces.find(
+            const workspaceEntry = role.workspace.find(
               (w) => w.workspaceId?.toString() === workspaceId.toString()
             );
-            if (workspaceEntry && Array.isArray(workspaceEntry.permissions)) {
-              const wsLower = workspaceEntry.permissions.map((p) =>
-                String(p).toLowerCase()
+            if (workspaceEntry && Array.isArray(workspaceEntry.action)) {
+              const wsLower = workspaceEntry.action.map((a) =>
+                String(a).toLowerCase()
               );
               if (
                 wsLower.includes(requiredAction.toLowerCase()) ||

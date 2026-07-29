@@ -3,6 +3,127 @@
 const mongoose = require("mongoose");
 const { Schema } = mongoose;
 
+const subcourseItemSchema = new Schema(
+  {
+    subcourse: {
+      type: Schema.Types.ObjectId,
+      ref: "Subcourse",
+      default: null,
+      index: true,
+    },
+    category: {
+      type: Schema.Types.ObjectId,
+      ref: "Category",
+      default: null,
+      index: true,
+    },
+    title: {
+      type: String,
+      trim: true,
+    },
+    shortDescription: {
+      type: String,
+      trim: true,
+    },
+    content: {
+      type: String,
+      trim: true,
+    },
+    description: {
+      type: String,
+      trim: true,
+    },
+    fee: {
+      type: Schema.Types.ObjectId,
+      ref: "Fee",
+      default: null,
+    },
+    duration: {
+      type: Schema.Types.ObjectId,
+      ref: "Duration",
+      default: null,
+    },
+    eligibility: {
+      type: Schema.Types.ObjectId,
+      ref: "Eligibility",
+      default: null,
+    },
+    modules: [
+      {
+        title: { type: String, trim: true },
+        description: { type: String, trim: true },
+      },
+    ],
+    keyHighlights: [
+      { type: String, trim: true },
+    ],
+    whoCanApply: [
+      { type: String, trim: true },
+    ],
+    admissionProcess: [
+      { type: String, trim: true },
+    ],
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: true }
+);
+
+const universityOfferingSchema = new Schema(
+  {
+    university: {
+      type: Schema.Types.ObjectId,
+      ref: "University",
+      required: [true, "University is required for offering"],
+      index: true,
+    },
+    workspace: {
+      type: Schema.Types.ObjectId,
+      ref: "Workspace",
+      default: null,
+      index: true,
+    },
+    fee: {
+      type: Schema.Types.ObjectId,
+      ref: "Fee",
+      default: null,
+      index: true,
+    },
+    duration: {
+      type: Schema.Types.ObjectId,
+      ref: "Duration",
+      default: null,
+      index: true,
+    },
+    eligibility: {
+      type: Schema.Types.ObjectId,
+      ref: "Eligibility",
+      default: null,
+      index: true,
+    },
+    category: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "Category",
+        index: true,
+      },
+    ],
+    subcourses: [subcourseItemSchema],
+    brochureUrl: {
+      type: Schema.Types.ObjectId,
+      ref: "Media",
+      default: null,
+    },
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  { _id: true }
+);
+
 const courseSchema = new Schema(
   {
     removed: {
@@ -19,10 +140,12 @@ const courseSchema = new Schema(
       default: true,
       index: true,
     },
+    // Identification
     title: {
       type: String,
       required: [true, "Course title is required"],
       trim: true,
+      index: true,
     },
     slug: {
       type: String,
@@ -32,18 +155,12 @@ const courseSchema = new Schema(
       trim: true,
       index: true,
     },
-    university: {
-      type: Schema.Types.ObjectId,
-      ref: "University",
+    description: {
+      type: String,
       default: null,
-      index: true,
+      trim: true,
     },
-    category: {
-      type: Schema.Types.ObjectId,
-      ref: "Category",
-      default: null,
-      index: true,
-    },
+    // Master Categories
     categories: [
       {
         type: Schema.Types.ObjectId,
@@ -51,18 +168,10 @@ const courseSchema = new Schema(
         index: true,
       },
     ],
-    duration: {
-      type: Schema.Types.ObjectId,
-      ref: "Duration",
-      default: null,
-      index: true,
-    },
-    eligibility: {
-      type: Schema.Types.ObjectId,
-      ref: "Eligibility",
-      default: null,
-      index: true,
-    },
+    // 🌟 University-Wise Specific Offerings
+    universityOfferings: [universityOfferingSchema],
+
+    // Media & Branding
     logo: {
       type: Schema.Types.ObjectId,
       ref: "Media",
@@ -75,28 +184,13 @@ const courseSchema = new Schema(
       default: null,
       index: true,
     },
-    fee: {
-      type: Schema.Types.ObjectId,
-      ref: "Fee",
-      default: null,
-      index: true,
-    },
     brochureUrl: {
-      type: String,
+      type: Schema.Types.ObjectId,
+      ref: "Media",
       default: null,
-      trim: true,
     },
-    syllabus: [
-      {
-        type: String,
-        trim: true,
-      },
-    ],
-    careers: {
-      type: String,
-      default: null,
-      trim: true,
-    },
+
+    // Display & Meta
     featured: {
       type: Boolean,
       default: false,
@@ -118,9 +212,8 @@ const courseSchema = new Schema(
   }
 );
 
-courseSchema.index({ university: 1, removed: 1, enabled: 1 });
-courseSchema.index({ category: 1, removed: 1, enabled: 1 });
 courseSchema.index({ categories: 1, removed: 1, enabled: 1 });
+courseSchema.index({ "universityOfferings.university": 1, removed: 1, enabled: 1 });
 courseSchema.index({ slug: 1, removed: 1 });
 
 const Course = mongoose.model("Course", courseSchema);
