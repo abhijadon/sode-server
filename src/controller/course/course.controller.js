@@ -79,8 +79,8 @@ async function getWebsiteCourses(request, reply) {
                 courseId: courseDoc._id,
                 title: finalTitle,
                 slug: finalSlug,
-                description: subItem.description || courseDoc.description,
-                content: subItem.content || courseDoc.description,
+                description: subItem.description || subItem.subcourse?.description || courseDoc.description || "",
+                content: subItem.content || subItem.description || subItem.subcourse?.content || courseDoc.content || courseDoc.description || "",
                 categories: courseDoc.categories,
                 logo: courseDoc.logo,
                 image: courseDoc.image,
@@ -89,9 +89,18 @@ async function getWebsiteCourses(request, reply) {
                 order: courseDoc.order,
                 fee: subItem.fee || offering.fee,
                 duration: subItem.duration || offering.duration,
-                keyHighlights: subItem.keyHighlights || [],
-                whoCanApply: subItem.whoCanApply || [],
-                admissionProcess: subItem.admissionProcess || [],
+                keyHighlights: (Array.isArray(subItem.keyHighlights) && subItem.keyHighlights.length > 0)
+                  ? subItem.keyHighlights
+                  : (Array.isArray(courseDoc.keyHighlights) ? courseDoc.keyHighlights : []),
+                whoCanApply: (Array.isArray(subItem.whoCanApply) && subItem.whoCanApply.length > 0)
+                  ? subItem.whoCanApply
+                  : (Array.isArray(courseDoc.whoCanApply) ? courseDoc.whoCanApply : []),
+                admissionProcess: (Array.isArray(subItem.admissionProcess) && subItem.admissionProcess.length > 0)
+                  ? subItem.admissionProcess
+                  : (Array.isArray(courseDoc.admissionProcess) ? courseDoc.admissionProcess : []),
+                modules: (Array.isArray(subItem.modules) && subItem.modules.length > 0)
+                  ? subItem.modules
+                  : (Array.isArray(courseDoc.modules) ? courseDoc.modules : []),
                 subcourseCategory: subItem.category,
                 isSubcourse: true,
                 university: uniObj,

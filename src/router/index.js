@@ -337,6 +337,7 @@ module.exports = async function (app, options) {
     }
 
     if (entity === "media") {
+      updateHandler = MediaController.updateMedia;
       removeHandler = MediaController.deleteMedia;
     }
 

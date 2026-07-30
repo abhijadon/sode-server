@@ -288,61 +288,79 @@ async function seedExactDataSheet76() {
       workspacesMap.set(wsName.toLowerCase(), wsDoc._id);
     }
 
-    // 3️⃣ Ensure Main Degree Categories (type: main)
-    const mainDegreeMap = new Map();
-    const degreeLevels = [
-      { name: "Doctorate", slug: "doctorate" },
-      { name: "Master", slug: "master" },
-      { name: "Certification", slug: "certification" },
-      { name: "Diploma", slug: "diploma" },
-      { name: "Master + Doctorate (Dual)", slug: "dual" },
-    ];
-
-    for (const deg of degreeLevels) {
-      let degDoc = await Category.findOne({ slug: deg.slug });
-      if (!degDoc) {
-        degDoc = await Category.create({
-          name: deg.name,
-          slug: deg.slug,
-          type: "main",
-          parentId: [],
+    // 2.5️⃣ Ensure "Bachelor" category exists and has "Master" category's icon/logo
+    console.log("💎 Ensuring Bachelor Category exists with Master's icon...");
+    let bachelorCatId = null;
+    const masterCat = await Category.findOne({ name: { $regex: /^master/i }, removed: false });
+    if (masterCat) {
+      let bachelorCat = await Category.findOne({ name: { $regex: /^bachelor/i }, removed: false });
+      if (!bachelorCat) {
+        console.log("   ➡️ Creating Bachelor category...");
+        bachelorCat = await Category.create({
+          name: "Bachelor",
+          slug: "bachelor",
+          icon: masterCat.icon,
+          image: masterCat.image,
+          logo: masterCat.logo,
+          logoSrc: masterCat.logoSrc,
+          imageSrc: masterCat.imageSrc,
           enabled: true,
           removed: false,
         });
       } else {
-        degDoc.type = "main";
-        await degDoc.save();
+        console.log("   ➡️ Updating Bachelor category icon...");
+        await Category.updateOne(
+          { _id: bachelorCat._id },
+          { $set: { 
+              icon: masterCat.icon, 
+              image: masterCat.image,
+              logo: masterCat.logo,
+              logoSrc: masterCat.logoSrc,
+              imageSrc: masterCat.imageSrc
+            } 
+          }
+        );
       }
-      mainDegreeMap.set(deg.name.toLowerCase(), degDoc._id);
-      mainDegreeMap.set(deg.slug.toLowerCase(), degDoc._id);
+      bachelorCatId = bachelorCat._id;
     }
 
-    // 4️⃣ Ensure Topic Subcategories (type: topic)
-    const topicSubcatMap = new Map();
-    const topics = [
-      { name: "AI Courses", slug: "browse-ai-courses" },
-      { name: "Machine Learning", slug: "machine-learning" },
-      { name: "Data Science", slug: "data-science" },
-      { name: "HR", slug: "hr" },
-      { name: "Finance", slug: "finance" },
-      { name: "Management", slug: "management" },
-      { name: "Leadership", slug: "leadership" },
-      { name: "Banking", slug: "banking" },
-    ];
-
-    for (const top of topics) {
-      let topDoc = await Category.findOne({ slug: top.slug });
-      if (!topDoc) {
-        topDoc = await Category.create({
-          name: top.name,
-          slug: top.slug,
-          type: "topic",
-          enabled: true,
-          removed: false,
-        });
+    // 2.6️⃣ Set Bachelor as parent for Finance and AI Courses
+    if (bachelorCatId) {
+      console.log("💎 Setting Bachelor as parent for Finance and AI Courses...");
+      const targetSubcats = ["Finance", "AI Courses"];
+      for (const catName of targetSubcats) {
+        const cat = await Category.findOne({ name: { $regex: new RegExp(`^${catName}$`, "i") }, removed: false });
+        if (cat) {
+          await Category.updateOne(
+            { _id: cat._id },
+            { $addToSet: { parentId: bachelorCatId } }
+          );
+          console.log(`   ➡️ Added Bachelor as parent to ${cat.name}`);
+        }
       }
-      topicSubcatMap.set(top.name.toLowerCase(), topDoc._id);
-      topicSubcatMap.set(top.slug.toLowerCase(), topDoc._id);
+    }
+
+    // 3️⃣ Map Existing Categories (Read-Only - NEVER creates or modifies Category documents)
+    const mainDegreeMap = new Map();
+    const topicSubcatMap = new Map();
+
+    const existingCategories = await Category.find({ removed: false }).lean();
+    for (const cat of existingCategories) {
+      if (cat.name) {
+        mainDegreeMap.set(cat.name.toLowerCase(), cat._id);
+        topicSubcatMap.set(cat.name.toLowerCase(), cat._id);
+      }
+      if (cat.slug) {
+        mainDegreeMap.set(cat.slug.toLowerCase(), cat._id);
+        topicSubcatMap.set(cat.slug.toLowerCase(), cat._id);
+      }
+    }
+    // Aliases for matching spreadsheet names to existing category slugs
+    if (mainDegreeMap.has("master-doctorate-dual")) {
+      mainDegreeMap.set("dual", mainDegreeMap.get("master-doctorate-dual"));
+    }
+    if (topicSubcatMap.has("browse-human-resource")) {
+      topicSubcatMap.set("hr", topicSubcatMap.get("browse-human-resource"));
     }
 
     // 5️⃣ Create UNIQUE Master Subcourses
