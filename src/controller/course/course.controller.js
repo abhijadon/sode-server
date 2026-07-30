@@ -343,6 +343,13 @@ async function getWebsiteCourseBySlug(request, reply) {
             const offering = doc.universityOfferings[oIdx];
             if (offering.subcourses) {
               for (const sub of offering.subcourses) {
+                const mainTitle = (doc.title || doc.name || "").trim();
+                const subTitle = (sub.title || sub.name || "").trim();
+                let combinedTitle = subTitle;
+                if (mainTitle && subTitle && !subTitle.toLowerCase().includes(mainTitle.toLowerCase())) {
+                  combinedTitle = `${mainTitle} - ${subTitle}`;
+                }
+
                 // Match against subcourse title, subcourse ref slug/name, or category name
                 const candidates = [
                   sub.title,
@@ -351,6 +358,7 @@ async function getWebsiteCourseBySlug(request, reply) {
                   sub.subcourse?.name,
                   sub.subcourse?.slug,
                   sub.category?.name,
+                  combinedTitle,
                 ].filter(Boolean);
 
                 if (candidates.some(c => slugify(c) === slug || c === slug)) {

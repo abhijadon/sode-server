@@ -63,6 +63,56 @@ const subcourseItemSchema = new Schema(
     admissionProcess: [
       { type: String, trim: true },
     ],
+    overviewTitle: { type: String, trim: true },
+    overviewDescription: { type: String, trim: true },
+    whyChooseTitle: { type: String, trim: true },
+    whyChooseDescription: { type: String, trim: true },
+    courseSnapshotBottom: [
+      {
+        label: { type: String, trim: true },
+        value: { type: String, trim: true },
+      },
+    ],
+    skillsSection: {
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
+      skillsGain: [{ type: String, trim: true }],
+      curriculumOverview: [{ type: String, trim: true }],
+    },
+    learningExperience: {
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
+      learningFeatures: [{ type: String, trim: true }],
+    },
+    instituteSection: {
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
+      certificateTitle: { type: String, trim: true },
+      certificateDescription: { type: String, trim: true },
+      certificateImage: { type: Schema.Types.ObjectId, ref: "Media", default: null },
+      whyItMatters: [{ type: String, trim: true }],
+    },
+    careerSection: {
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
+      careerOpportunities: [{ type: String, trim: true }],
+      industriesHiring: [{ type: String, trim: true }],
+    },
+    feeSection: {
+      title: { type: String, trim: true },
+      description: { type: String, trim: true },
+      financialSupport: [{ type: String, trim: true }],
+      footerNote: { type: String, trim: true },
+    },
+    faqSection: {
+      title: { type: String, trim: true },
+      faqs: [
+        {
+          question: { type: String, trim: true },
+          answer: { type: String, trim: true },
+        },
+      ],
+    },
     enabled: {
       type: Boolean,
       default: true,
