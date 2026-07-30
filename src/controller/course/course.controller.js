@@ -29,6 +29,7 @@ const populateOfferings = [
   { path: "universityOfferings.subcourses.fee", select: "_id title amount currency slug" },
   { path: "universityOfferings.subcourses.duration", select: "_id title slug months" },
   { path: "universityOfferings.subcourses.eligibility", select: "_id title slug" },
+  { path: "universityOfferings.subcourses.courseSnapshotBottom.iconMedia", select: "_id name url alt" },
   { path: "universityOfferings.brochureUrl", select: "_id name url alt" },
 ];
 

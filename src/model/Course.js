@@ -69,6 +69,9 @@ const subcourseItemSchema = new Schema(
     whyChooseDescription: { type: String, trim: true },
     courseSnapshotBottom: [
       {
+        iconType: { type: String, enum: ["lucide", "media"], default: "lucide" },
+        iconLucide: { type: String, trim: true, default: "" },
+        iconMedia: { type: Schema.Types.ObjectId, ref: "Media", default: null },
         label: { type: String, trim: true },
         value: { type: String, trim: true },
       },
