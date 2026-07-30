@@ -96,6 +96,10 @@ const masterSubcoursesCatalog = [
   { name: "IT Management", slug: "it-management", topic: "management" },
   { name: "Advanced Project Management", slug: "advanced-project-management", topic: "management" },
   { name: "Sales & Marketing", slug: "sales-marketing", topic: "management" },
+  { name: "Social Science", slug: "social-science", topic: "social science" },
+  { name: "Science", slug: "science", topic: "science" },
+  { name: "Law", slug: "law", topic: "law" },
+  { name: "Entrepreneurship", slug: "entrepreneurship", topic: "entrepreneurship" },
 ];
 
 // Helper to resolve the matching master subcourse slug
@@ -112,6 +116,11 @@ function getMasterSubcourseSlug(topicStr, titleStr) {
   if (t === "machine learning") return "machine-learning";
   if (t === "data science") return "data-science";
   if (t === "management") return "management";
+  if (t === "social science") return "social-science";
+  if (t === "science") return "science";
+  if (t === "law") return "law";
+  if (t === "entrepreneurship") return "entrepreneurship";
+  if (t === "healthcare") return "healthcare-management";
 
   // Fallback to title keywords if topic doesn't match
   if (title.includes("finance") || title.includes("tax") || title.includes("accounting") || title.includes("valuation")) {
@@ -255,6 +264,20 @@ const officialSheet76 = [
   { mainCourse: "Master of Science in Machine Learning & Artificial Intelligence", typeGroup: "Other", uniName: "IIIT Bangalore with LJMU", degreeLevel: "Master", subTitle: "Master of Science in Machine Learning & Artificial Intelligence", topic: "Machine Learning", feeAmount: 535000, feeTitle: "₹5,35,000", durationStr: "18 months", months: 18, provider: "upGrad" },
   { mainCourse: "Master of Science in Data Science", typeGroup: "Other", uniName: "IIIT Bangalore with LJMU", degreeLevel: "Master", subTitle: "Master of Science in Data Science", topic: "Data Science", feeAmount: 485000, feeTitle: "₹4,85,000", durationStr: "18 months", months: 18, provider: "upGrad" },
   { mainCourse: "Executive Development Programme in Human Resource Management", typeGroup: "Other", uniName: "XLRI Jamshedpur (with SHRM)", degreeLevel: "Certification", subTitle: "Executive Development Programme in Human Resource Management", topic: "HR", feeAmount: 180000, feeTitle: "₹1,80,000", durationStr: "6-7 months", months: 6, provider: "TimesPro" },
+  
+  // ── O.P. Jindal Global University ─────────────────────────────────────────
+  { mainCourse: "B. Com", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Bachelor", subTitle: "International Accounting & Finance", topic: "Finance", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "3 years", months: 36, provider: "OPJ" },
+  { mainCourse: "B.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Bachelor", subTitle: "Finance & Entrepreneurship", topic: "Finance", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "3 years", months: 36, provider: "OPJ" },
+  { mainCourse: "B.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Bachelor", subTitle: "AI & Finance", topic: "AI Courses", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "3 years", months: 36, provider: "OPJ" },
+  { mainCourse: "M.A.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Criminology & Criminal Justice", topic: "Social Science", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "AI & Finance", topic: "AI Courses", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Environmental Change & Sustainability", topic: "Science", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Global Health & Human Development", topic: "Healthcare", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Strategic Communication", topic: "Leadership", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.A.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Educational Leadership and Governance", topic: "Leadership", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Design Thinking, Innovation and Strategy", topic: "Management", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.A.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Legislative Drafting", topic: "Law", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
+  { mainCourse: "M.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Master", subTitle: "Entrepreneurship, Innovation & Start-ups", topic: "Entrepreneurship", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "2 years", months: 24, provider: "OPJ" },
 ];
 
 async function seedExactDataSheet76() {
@@ -274,7 +297,7 @@ async function seedExactDataSheet76() {
 
     // 2️⃣ Ensure Workspaces
     const workspacesMap = new Map();
-    for (const wsName of ["upGrad", "TimesPro"]) {
+    for (const wsName of ["upGrad", "TimesPro", "OPJ"]) {
       let wsDoc = await Workspace.findOne({ name: new RegExp(`^${wsName}$`, "i") });
       if (!wsDoc) {
         wsDoc = await Workspace.create({
@@ -294,8 +317,17 @@ async function seedExactDataSheet76() {
     const masterCat = await Category.findOne({ name: { $regex: /^master/i }, removed: false });
     if (masterCat) {
       let bachelorCat = await Category.findOne({ name: { $regex: /^bachelor/i }, removed: false });
+      const targetOrder = (masterCat.order || 0) + 1;
+      
       if (!bachelorCat) {
         console.log("   ➡️ Creating Bachelor category...");
+        
+        // Push other categories down to make space
+        await Category.updateMany(
+          { order: { $gte: targetOrder }, removed: false },
+          { $inc: { order: 1 } }
+        );
+
         bachelorCat = await Category.create({
           name: "Bachelor",
           slug: "bachelor",
@@ -304,11 +336,21 @@ async function seedExactDataSheet76() {
           logo: masterCat.logo,
           logoSrc: masterCat.logoSrc,
           imageSrc: masterCat.imageSrc,
+          order: targetOrder,
           enabled: true,
           removed: false,
         });
       } else {
-        console.log("   ➡️ Updating Bachelor category icon...");
+        console.log("   ➡️ Updating Bachelor category icon and order...");
+        
+        // If current order isn't correct, shift others and update
+        if (bachelorCat.order !== targetOrder) {
+           await Category.updateMany(
+             { order: { $gte: targetOrder }, _id: { $ne: bachelorCat._id }, removed: false },
+             { $inc: { order: 1 } }
+           );
+        }
+
         await Category.updateOne(
           { _id: bachelorCat._id },
           { $set: { 
@@ -316,7 +358,8 @@ async function seedExactDataSheet76() {
               image: masterCat.image,
               logo: masterCat.logo,
               logoSrc: masterCat.logoSrc,
-              imageSrc: masterCat.imageSrc
+              imageSrc: masterCat.imageSrc,
+              order: targetOrder
             } 
           }
         );
