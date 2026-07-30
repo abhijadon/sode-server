@@ -261,4 +261,39 @@ async function executeApiConfigByKey(configKey, payload = {}, options = {}) {
   }
 }
 
-module.exports = { executeApiConfigByKey };
+/**
+ * Executes all active ApiConfigs matching a specific triggerEvent
+ * @param {string} event - The event name (e.g. "lead_submission")
+ * @param {object} payload - Request payload data
+ * @param {object} options - Optional overrides
+ */
+async function executeApiEvent(event, payload = {}, options = {}) {
+  try {
+    const activeConfigs = await ApiConfig.find({
+      triggerEvent: event,
+      enabled: true,
+      removed: false,
+    });
+
+    if (!activeConfigs || activeConfigs.length === 0) {
+      console.log(`No active API Configs found for event: ${event}`);
+      return { success: true, message: `No active configurations found for event ${event}`, results: [] };
+    }
+
+    const promises = activeConfigs.map((config) => executeApiConfigByKey(config.key, payload, options));
+    const rawResults = await Promise.allSettled(promises);
+    
+    const results = rawResults.map((r, i) => ({
+      key: activeConfigs[i].key,
+      status: r.status,
+      result: r.status === "fulfilled" ? r.value : r.reason,
+    }));
+
+    return { success: true, results };
+  } catch (error) {
+    console.error(`❌ Failed to execute API Event '${event}':`, error);
+    throw error;
+  }
+}
+
+module.exports = { executeApiConfigByKey, executeApiEvent };

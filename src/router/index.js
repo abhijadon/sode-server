@@ -779,6 +779,13 @@ module.exports = async function (app, options) {
         handler: ApiConfigController.executeApiConfig,
         preValidation: null,
       });
+
+      routes.push({
+        method: "POST",
+        url: `/${entity}/trigger`,
+        handler: ApiConfigController.triggerApiEvent,
+        preValidation: null,
+      });
     }
 
     // ✅ USER SPECIFIC AUTH ROUTES
