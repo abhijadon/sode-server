@@ -70,6 +70,12 @@ const apiConfigSchema = new Schema(
         value: { type: String, trim: true },
       },
     ],
+    availableVariables: [
+      {
+        key: { type: String, trim: true },
+        description: { type: String, trim: true },
+      },
+    ],
     requestBody: {
       type: Schema.Types.Mixed,
       default: {},

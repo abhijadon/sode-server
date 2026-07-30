@@ -4,6 +4,60 @@ const { ApiConfig } = require("../../model/ApiConfig");
 const { ApiLog } = require("../../model/ApiLog");
 
 /**
+ * Helper function to interpolate {{key}} with values from a data object
+ */
+function interpolate(str, data) {
+  if (typeof str !== "string") return str;
+  return str.replace(/\{\{\s*([^}]+)\s*\}\}/g, (match, key) => {
+    const val = data[key.trim()];
+    return val !== undefined && val !== null ? val : "";
+  });
+}
+
+/**
+ * Helper function for deep interpolation of objects/arrays
+ */
+function deepInterpolate(obj, data) {
+  if (typeof obj === "string") {
+    // preserve original type if it's a direct variable map (e.g. "{{phone}}" -> 919876543210)
+    const pureVarMatch = obj.match(/^\{\{\s*([^}]+)\s*\}\}$/);
+    if (pureVarMatch) {
+      const key = pureVarMatch[1].trim();
+      return data[key] !== undefined ? data[key] : "";
+    }
+    return interpolate(obj, data);
+  }
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepInterpolate(item, data));
+  }
+  if (obj !== null && typeof obj === "object") {
+    const newObj = {};
+    for (const [k, v] of Object.entries(obj)) {
+      newObj[k] = deepInterpolate(v, data);
+    }
+    return newObj;
+  }
+  return obj;
+}
+
+/**
+ * Helper to set a value at a nested path using dot notation
+ * e.g. setNestedValue({}, "attributes.FULLNAME", "John")
+ */
+function setNestedValue(obj, path, value) {
+  const parts = path.split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (!(part in current) || typeof current[part] !== 'object') {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+  current[parts[parts.length - 1]] = value;
+}
+
+/**
  * Dynamic API Executor with automatic Mongoose ApiLog recording
  * @param {string} configKey - Unique API key slug (e.g. "crm_lead_api")
  * @param {object} payload - Request payload data (e.g. lead data: name, email, phone, etc.)
@@ -30,12 +84,14 @@ async function executeApiConfigByKey(configKey, payload = {}, options = {}) {
     }
 
     // 2️⃣ Resolve Target URL, HTTP Method, and Headers
-    const resolvedEndpoint = options.endpoint || apiConfigDoc.endpoint || apiConfigDoc.meta?.endpoint || "";
+    let resolvedEndpoint = options.endpoint || apiConfigDoc.endpoint || apiConfigDoc.meta?.endpoint || "";
+    resolvedEndpoint = interpolate(resolvedEndpoint, payload);
 
     if (resolvedEndpoint.startsWith("http://") || resolvedEndpoint.startsWith("https://")) {
       targetUrl = resolvedEndpoint;
     } else {
-      const baseUrl = (apiConfigDoc.baseUrl || "").replace(/\/$/, "");
+      let baseUrl = (apiConfigDoc.baseUrl || "").replace(/\/$/, "");
+      baseUrl = interpolate(baseUrl, payload);
       const pathUrl = (resolvedEndpoint || "").replace(/^\//, "");
       targetUrl = pathUrl ? `${baseUrl}/${pathUrl}` : baseUrl;
     }
@@ -46,14 +102,14 @@ async function executeApiConfigByKey(configKey, payload = {}, options = {}) {
     if (Array.isArray(apiConfigDoc.headers)) {
       apiConfigDoc.headers.forEach((h) => {
         if (h && h.key && h.value) {
-          requestHeaders[h.key] = h.value;
+          requestHeaders[h.key] = interpolate(h.value, payload);
         }
       });
     }
 
     // Add apiKey header if authType is apiKey or x-api-key missing
     if (apiConfigDoc.apiKey && !requestHeaders["x-api-key"] && !requestHeaders["X-API-KEY"]) {
-      requestHeaders["x-api-key"] = apiConfigDoc.apiKey;
+      requestHeaders["x-api-key"] = interpolate(apiConfigDoc.apiKey, payload);
     }
 
     // Merge custom caller headers
@@ -66,14 +122,53 @@ async function executeApiConfigByKey(configKey, payload = {}, options = {}) {
     if (Array.isArray(apiConfigDoc.bodyParams)) {
       apiConfigDoc.bodyParams.forEach((param) => {
         if (param && param.key) {
-          schemaBodyParamsObj[param.key] = param.value || "";
+          // If the value is a string, interpolate it
+          if (typeof param.value === "string") {
+            // Check if it's purely a single variable e.g. "{{name}}" to preserve type (optional, but good for numbers/booleans if needed)
+            const pureVarMatch = param.value.match(/^\{\{\s*([^}]+)\s*\}\}$/);
+            if (pureVarMatch) {
+              const key = pureVarMatch[1].trim();
+              setNestedValue(schemaBodyParamsObj, param.key, payload[key] !== undefined ? payload[key] : "");
+            } else {
+              let finalVal = interpolate(param.value, payload) || "";
+              // Automatically parse JSON arrays, objects, booleans, and numbers
+              if (
+                finalVal === "true" ||
+                finalVal === "false" ||
+                finalVal === "null" ||
+                (!isNaN(finalVal) && finalVal.trim() !== "") ||
+                finalVal.startsWith("[") ||
+                finalVal.startsWith("{")
+              ) {
+                try {
+                  finalVal = JSON.parse(finalVal);
+                } catch (e) {
+                  // Keep as string if parsing fails
+                }
+              }
+              setNestedValue(schemaBodyParamsObj, param.key, finalVal);
+            }
+          } else {
+            setNestedValue(schemaBodyParamsObj, param.key, param.value || "");
+          }
         }
       });
     }
 
-    const defaultBody = typeof apiConfigDoc.requestBody === "object" ? apiConfigDoc.requestBody : {};
-    const defaultMetaPayload = apiConfigDoc.meta?.defaultPayload || {};
-    const finalPayload = { ...schemaBodyParamsObj, ...defaultBody, ...defaultMetaPayload, ...payload };
+    const rawRequestBody = typeof apiConfigDoc.requestBody === "object" ? apiConfigDoc.requestBody : {};
+    const defaultBody = deepInterpolate(rawRequestBody, payload);
+    const defaultMetaPayload = deepInterpolate(apiConfigDoc.meta?.defaultPayload || {}, payload);
+
+    // Instead of completely merging payload at the end which overrides all keys,
+    // we only merge payload keys that are NOT defined in the schema body parameters, 
+    // OR we can just use schemaBodyParamsObj as the definitive payload if it has keys.
+    // Let's merge them but prefer schemaBodyParamsObj if bodyParams are defined.
+    // If bodyParams are empty, fallback to payload.
+    const hasSchemaParams = Object.keys(schemaBodyParamsObj).length > 0;
+
+    const finalPayload = hasSchemaParams
+      ? { ...defaultBody, ...defaultMetaPayload, ...schemaBodyParamsObj }
+      : { ...defaultBody, ...defaultMetaPayload, ...payload };
 
     // 3️⃣ Execute HTTP Request
     const fetchOptions = {

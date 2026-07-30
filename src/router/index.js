@@ -16,7 +16,7 @@ const FaqController = require("../controller/faq/faq.controller");
 const MediaController = require("../controller/media/media.controller");
 const HeroController = require("../controller/hero/hero.controller");
 const CategoryController = require("../controller/category/category.controller");
-
+const ApiConfigController = require("../controller/apiconfig/apiconfig.controller");
 const { authenticate } = require("../middleware/auth/authenticate");
 const { checkPermission } = require("../middleware/auth/checkPermission");
 const { report_system } = require("../middleware/auth/report_system");
@@ -769,6 +769,16 @@ module.exports = async function (app, options) {
           preValidation: createPipeline,
         }
       );
+    }
+
+    // ✅ SPECIAL EXECUTE ROUTE FOR APICONFIG
+    if (entity === "apiconfig") {
+      routes.push({
+        method: "POST",
+        url: `/${entity}/execute`,
+        handler: ApiConfigController.executeApiConfig,
+        preValidation: null,
+      });
     }
 
     // ✅ USER SPECIFIC AUTH ROUTES
