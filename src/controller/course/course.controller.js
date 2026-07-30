@@ -63,18 +63,14 @@ async function getWebsiteCourses(request, reply) {
             subItems.forEach((subItem) => {
               const uniObj = offering.university;
               const uniName = uniObj?.name || "";
-              const rawTitle = subItem.title || courseDoc.title;
+              const rawTitle = subItem?.title || subItem?.name || courseDoc?.title || courseDoc?.name || (courseDoc?.slug ? `Online ${courseDoc.slug.toUpperCase()}` : "Online Program");
 
-              // Prepend university name to title if not already present
-              let finalTitle = rawTitle;
-              if (uniName && !finalTitle.toLowerCase().includes(uniName.toLowerCase())) {
-                finalTitle = `${uniName} - ${finalTitle}`;
-              }
+              const finalTitle = rawTitle;
 
               // Slug resolution: slugify subItem.title for dba/mba courses to keep it clean and specific
-              let finalSlug = courseDoc.slug;
+              let finalSlug = courseDoc.slug || "";
               if (courseDoc.slug === "dba" || courseDoc.slug === "mba") {
-                const slugify = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+                const slugify = (text) => (text || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
                 finalSlug = slugify(rawTitle);
               }
 
@@ -106,10 +102,8 @@ async function getWebsiteCourses(request, reply) {
           } else {
             const uniObj = offering.university;
             const uniName = uniObj?.name || "";
-            let finalTitle = courseDoc.title;
-            if (uniName && !finalTitle.toLowerCase().includes(uniName.toLowerCase())) {
-              finalTitle = `${uniName} - ${finalTitle}`;
-            }
+            const rawTitle = courseDoc?.title || courseDoc?.name || (courseDoc?.slug ? `Online ${courseDoc.slug.toUpperCase()}` : "Online Program");
+            const finalTitle = rawTitle;
 
             flattenedPrograms.push({
               _id: courseDoc._id,
@@ -133,7 +127,7 @@ async function getWebsiteCourses(request, reply) {
             });
           }
         });
-      } else {
+      } else if (courseDoc && (courseDoc.title || courseDoc.slug || courseDoc.name)) {
         flattenedPrograms.push(courseDoc);
       }
     });
@@ -266,6 +260,8 @@ async function getWebsiteCourses(request, reply) {
       });
     }
 
+    filteredPrograms = filteredPrograms.filter(prog => prog && Object.keys(prog).length > 0 && (prog.title || prog.slug || prog.name || prog._id));
+
     const totalCount = filteredPrograms.length;
     const limit = limitNum > 0 ? limitNum : totalCount || 10;
     const paginatedPrograms = filteredPrograms.slice(skipNum, skipNum + limit);
@@ -301,7 +297,7 @@ async function getWebsiteCourseBySlug(request, reply) {
       });
     }
 
-    const slugify = (text) => text.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+    const slugify = (text) => (text || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
     // 1. Try finding by slug directly
     let courseDoc = await Course.findOne({ slug, removed: false })
