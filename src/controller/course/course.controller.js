@@ -198,7 +198,12 @@ async function getWebsiteCourses(request, reply) {
           });
         }
 
-        return matchesText || matchesCat;
+        const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
+        const uniName = (uniObj?.name || "").toLowerCase();
+        const uniSlug = (uniObj?.slug || "").toLowerCase();
+        const matchesUni = searchRegexes.some((regex) => regex.test(uniName) || regex.test(uniSlug));
+
+        return matchesText || matchesCat || matchesUni;
       });
     }
 

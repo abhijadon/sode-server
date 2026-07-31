@@ -72,16 +72,7 @@ async function buildCourseFilter(request, reply) {
     for (const rawToken of tokens) {
       const stripped = rawToken.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
 
-      // Ensure token refers to a recognized Main Degree Category or Main Type
-      const isMainDegree =
-        MAIN_DEGREE_SLUGS.has(rawToken) ||
-        MAIN_DEGREE_SLUGS.has(stripped) ||
-        mongoose.Types.ObjectId.isValid(rawToken);
-
-      if (!isMainDegree) {
-        // If a topic subcategory (e.g. ai-courses, finance, hr) was passed in category param, do not treat as main category
-        continue;
-      }
+      // Removed strict MAIN_DEGREE_SLUGS check to allow matching 'iit', 'iim', etc. as categories.
 
       // Find matching Main Categories for the specific token
       const mainCatDocs = await Category.find({
@@ -115,7 +106,12 @@ async function buildCourseFilter(request, reply) {
     // If no valid main degree category matched, force 0 results
     if (catIds.length === 0) return { _id: null };
 
-    return { categories: { $in: catIds } };
+    return {
+      $or: [
+        { categories: { $in: catIds } },
+        { "universityOfferings.category": { $in: catIds } },
+      ],
+    };
   }
 
   // ─── 2️⃣ Subcategory & Specialization Filter (e.g. subcategory=ai-courses) ──
@@ -125,6 +121,7 @@ async function buildCourseFilter(request, reply) {
 
     let subCatIds = [];
     let subcourseIds = [];
+    let uniMatchesFromSubcat = [];
 
     for (const rawToken of tokens) {
       const stripped = rawToken.replace(/^(diploma|certification|master|doctorate|browse)-/, "");
@@ -159,6 +156,26 @@ async function buildCourseFilter(request, reply) {
         .lean();
 
       subcourseIds.push(...subDocs.map((s) => s._id));
+
+      // Also search University in case frontend passes a university slug (e.g. roorkee) as a subcategory
+      const uniDocs = await University.find({
+        removed: false,
+        $or: [
+          { slug: rawToken },
+          { slug: stripped },
+          { slug: new RegExp(stripped.replace(/-/g, " "), "i") },
+          { name: new RegExp(`^${stripped.replace(/-/g, " ")}$`, "i") },
+          { name: new RegExp(stripped.replace(/-/g, " "), "i") }, // loose match for 'roorkee' in 'IIT Roorkee'
+          ...(mongoose.Types.ObjectId.isValid(rawToken) ? [{ _id: rawToken }] : []),
+        ],
+      })
+        .select("_id")
+        .lean();
+
+      if (uniDocs.length > 0) {
+        // We will store university IDs separately and add them to conditions
+        uniMatchesFromSubcat.push(...uniDocs.map((u) => u._id));
+      }
     }
 
     const subConditions = [];
@@ -168,6 +185,9 @@ async function buildCourseFilter(request, reply) {
     }
     if (subcourseIds.length > 0) {
       subConditions.push({ "universityOfferings.subcourses.subcourse": { $in: subcourseIds } });
+    }
+    if (uniMatchesFromSubcat.length > 0) {
+      subConditions.push({ "universityOfferings.university": { $in: uniMatchesFromSubcat } });
     }
     for (const token of tokens) {
       const sRegex = new RegExp(token.replace(/-/g, " "), "i");

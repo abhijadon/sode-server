@@ -500,8 +500,24 @@ async function seedExactDataSheet76() {
         let mainWorkspaceId = null;
 
         for (const row of uRows) {
-          const topicSubcatId = topicSubcatMap.get(row.topic.toLowerCase()) || topicSubcatMap.get("management");
-          topicCatIds.add(String(topicSubcatId));
+          // Support multiple topics separated by +, &, or commas (e.g. "AI + Finance")
+          const topicParts = (row.topic || "").split(/[+&,]/).map((s) => s.trim().toLowerCase()).filter(Boolean);
+          const currentTopicCatIds = [];
+
+          for (let part of topicParts) {
+            if (part === "ai" || part === "ai courses") part = "ai courses";
+            const catId = topicSubcatMap.get(part) || topicSubcatMap.get("management");
+            if (catId) {
+              topicCatIds.add(String(catId));
+              currentTopicCatIds.push(catId);
+            }
+          }
+
+          // Add typeGroup category if present (e.g. IIT, IIM)
+          const typeGroupCatId = mainDegreeMap.get(row.typeGroup.toLowerCase());
+          if (typeGroupCatId) {
+            topicCatIds.add(String(typeGroupCatId));
+          }
 
           // Find or create Fee
           let feeDoc = await Fee.findOne({ amount: row.feeAmount });
@@ -573,7 +589,7 @@ async function seedExactDataSheet76() {
 
           subcourseItems.push({
             subcourse: masterSubcourseId,
-            category: topicSubcatId,
+            category: currentTopicCatIds[0] || topicSubcatMap.get("management"),
             title: cleanSubcourseTitle,
             shortDescription: `${row.topic} Specialization`,
             description: overviewContent,
@@ -598,12 +614,24 @@ async function seedExactDataSheet76() {
         });
       }
 
+      const allCategoryIdsForCourse = new Set();
+      if (mainDegreeId) allCategoryIdsForCourse.add(String(mainDegreeId));
+
+      const typeGroupCatId = mainDegreeMap.get(group.typeGroup.toLowerCase());
+      if (typeGroupCatId) allCategoryIdsForCourse.add(String(typeGroupCatId));
+
+      for (const offering of universityOfferings) {
+        if (offering.category) {
+          offering.category.forEach((cId) => allCategoryIdsForCourse.add(String(cId)));
+        }
+      }
+
       const courseSlug = slugify(courseTitle);
       await Course.create({
         title: courseTitle,
         slug: courseSlug,
         description: `Official ${courseTitle} program with multiple university offerings & specializations.`,
-        categories: [mainDegreeId],
+        categories: Array.from(allCategoryIdsForCourse),
         enabled: true,
         removed: false,
         universityOfferings,

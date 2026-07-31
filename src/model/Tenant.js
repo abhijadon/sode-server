@@ -38,7 +38,8 @@ const tenantSchema = new mongoose.Schema(
     },
 
     logo: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Media",
       default: null,
     },
 
@@ -72,21 +73,21 @@ const tenantSchema = new mongoose.Schema(
     },
 
     city: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "City",
       default: null,
-      trim: true,
     },
 
     state: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "State",
       default: null,
-      trim: true,
     },
 
     country: {
-      type: String,
-      default: "India",
-      trim: true,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Country",
+      default: null,
     },
 
     pincode: {

@@ -258,6 +258,24 @@ const populateMap = {
       select: "name slug logoSrc imageSrc",
     },
   ],
+  tenant: [
+    {
+      path: "logo",
+      select: "url alt name fileName",
+    },
+    {
+      path: "city",
+      select: "name slug",
+    },
+    {
+      path: "state",
+      select: "name slug",
+    },
+    {
+      path: "country",
+      select: "name slug",
+    },
+  ],
 };
 
 // ✅ ऑप्शंस सेलेक्ट फ़ील्ड्स कॉन्फ़िगरेशन मैप (Router Level Projections)
