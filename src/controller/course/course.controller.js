@@ -161,43 +161,48 @@ async function getWebsiteCourses(request, reply) {
         .map((s) => s.trim().toLowerCase())
         .filter(Boolean);
 
-      const searchWords = rawTokens.flatMap((t) => {
-        const clean = t.replace(/^browse-/, "").replace(/-/g, " ");
-        return [t, clean];
-      });
-
-      const searchRegexes = searchWords.map((w) => {
-        const escaped = w.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
-        if (w.length <= 3) {
-          return new RegExp("\\b" + escaped + "\\b", "i");
-        }
-        return new RegExp(escaped, "i");
-      });
-
       filteredPrograms = filteredPrograms.filter((prog) => {
-        const title = prog.title || "";
-        const matchesTitle = searchRegexes.some((regex) => regex.test(title));
+        return rawTokens.some((t) => {
+          const clean = t.replace(/^browse-/, "").replace(/-/g, " ");
 
-        let matchesCat = false;
-        if (Array.isArray(prog.categories)) {
-          matchesCat = prog.categories.some((cat) => {
-            const cSlug = (cat?.slug || cat?.name || "").toLowerCase();
-            const cName = (cat?.name || "").toLowerCase();
-            return searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName));
-          });
-        }
-        if (!matchesCat && prog.subcourseCategory) {
-          const cSlug = (prog.subcourseCategory?.slug || prog.subcourseCategory?.name || "").toLowerCase();
-          const cName = (prog.subcourseCategory?.name || "").toLowerCase();
-          matchesCat = searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName) || String(prog.subcourseCategory._id) === regex.source);
-        }
+          // A. Check University match (e.g. subcategory=iim-kozhikode or roorkee)
+          const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
+          const uniName = (uniObj?.name || "").toLowerCase();
+          const uniSlug = (uniObj?.slug || "").toLowerCase();
+          const uniId = String(uniObj?._id || "");
+          if (uniSlug === t || uniName.includes(clean) || uniId === t) return true;
 
-        const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
-        const uniName = (uniObj?.name || "").toLowerCase();
-        const uniSlug = (uniObj?.slug || "").toLowerCase();
-        const matchesUni = searchRegexes.some((regex) => regex.test(uniName) || regex.test(uniSlug));
+          // B. Check Subcourse Category match (e.g. subcategory=science or finance or ai-courses)
+          if (prog.subcourseCategory) {
+            const cSlug = (prog.subcourseCategory?.slug || "").toLowerCase();
+            const cName = (prog.subcourseCategory?.name || "").toLowerCase();
+            const cId = String(prog.subcourseCategory?._id || "");
 
-        return matchesTitle || matchesCat || matchesUni;
+            if (cSlug === t || cSlug === clean || cId === t) return true;
+            if (cName === clean || cName === t) return true;
+
+            // If prog has a specific subcourse category and it does not match t, do not fallback to parent categories
+            return false;
+          }
+
+          // C. Check Parent Categories (for standalone courses or non-subcourse items)
+          if (Array.isArray(prog.categories)) {
+            const matchesCat = prog.categories.some((cat) => {
+              const cSlug = (cat?.slug || "").toLowerCase();
+              const cName = (cat?.name || "").toLowerCase();
+              return cSlug === t || cName === clean;
+            });
+            if (matchesCat) return true;
+          }
+
+          // D. Title match fallback
+          const title = (prog.title || "").toLowerCase();
+          const escaped = clean.replace(/[-\/\\^$*+?.()|[\]{}]/g, "\\$&");
+          const wordBoundaryRegex = new RegExp("(^|\\s|-)" + escaped + "($|\\s|-)", "i");
+          if (wordBoundaryRegex.test(title)) return true;
+
+          return false;
+        });
       });
     }
 

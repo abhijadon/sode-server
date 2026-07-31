@@ -137,7 +137,8 @@ async function buildCourseFilter(request, reply) {
         $or: [
           { slug: rawToken },
           { slug: stripped },
-          { title: new RegExp(stripped.replace(/-/g, " "), "i") },
+          { title: new RegExp(`^${stripped.replace(/-/g, " ")}$`, "i") },
+          { title: new RegExp(`\\b${stripped.replace(/-/g, " ")}\\b`, "i") },
           ...(mongoose.Types.ObjectId.isValid(rawToken) ? [{ _id: rawToken }] : []),
         ],
       })
