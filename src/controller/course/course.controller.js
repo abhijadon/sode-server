@@ -176,26 +176,20 @@ async function getWebsiteCourses(request, reply) {
 
       filteredPrograms = filteredPrograms.filter((prog) => {
         const title = prog.title || "";
-        const desc = prog.description || "";
-        const content = prog.content || "";
+        const matchesTitle = searchRegexes.some((regex) => regex.test(title));
 
-        const matchesText = searchRegexes.some((regex) => regex.test(title) || regex.test(desc) || regex.test(content));
-
-        const subCatObj = prog.subcourseCategory;
         let matchesCat = false;
-
-        if (subCatObj) {
-          const cSlug = subCatObj.slug || subCatObj.name || "";
-          const cName = subCatObj.name || "";
-          matchesCat = searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName) || String(subCatObj._id) === regex.source);
-        } else if (!prog.isSubcourse) {
-          const offering = prog.universityOfferings && prog.universityOfferings[0];
-          const offeringCats = Array.isArray(offering?.category) ? offering.category : [];
-          matchesCat = offeringCats.some((cat) => {
-            const cSlug = cat?.slug || cat?.name || "";
-            const cName = cat?.name || "";
+        if (Array.isArray(prog.categories)) {
+          matchesCat = prog.categories.some((cat) => {
+            const cSlug = (cat?.slug || cat?.name || "").toLowerCase();
+            const cName = (cat?.name || "").toLowerCase();
             return searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName));
           });
+        }
+        if (!matchesCat && prog.subcourseCategory) {
+          const cSlug = (prog.subcourseCategory?.slug || prog.subcourseCategory?.name || "").toLowerCase();
+          const cName = (prog.subcourseCategory?.name || "").toLowerCase();
+          matchesCat = searchRegexes.some((regex) => regex.test(cSlug) || regex.test(cName) || String(prog.subcourseCategory._id) === regex.source);
         }
 
         const uniObj = prog.university || (prog.universityOfferings && prog.universityOfferings[0]?.university);
@@ -203,7 +197,7 @@ async function getWebsiteCourses(request, reply) {
         const uniSlug = (uniObj?.slug || "").toLowerCase();
         const matchesUni = searchRegexes.some((regex) => regex.test(uniName) || regex.test(uniSlug));
 
-        return matchesText || matchesCat || matchesUni;
+        return matchesTitle || matchesCat || matchesUni;
       });
     }
 

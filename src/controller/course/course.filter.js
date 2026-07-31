@@ -90,17 +90,6 @@ async function buildCourseFilter(request, reply) {
 
       const matchedIds = mainCatDocs.map((c) => c._id);
       catIds.push(...matchedIds);
-
-      // Include child subcategories under these main categories
-      if (matchedIds.length > 0) {
-        const childDocs = await Category.find({
-          removed: false,
-          parentId: { $in: matchedIds },
-        })
-          .select("_id")
-          .lean();
-        catIds.push(...childDocs.map((c) => c._id));
-      }
     }
 
     // If no valid main degree category matched, force 0 results

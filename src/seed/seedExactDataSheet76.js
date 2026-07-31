@@ -34,24 +34,25 @@ function slugify(text) {
 // 📌 18 Master Universities Name Normalizer
 function getNormalizedUniName(rawName) {
   const name = (rawName || "").trim();
+  if (/^liverpool/i.test(name)) return "Liverpool Business School";
+  if (/^paris school/i.test(name)) return "Paris School of Business";
+  if (/^iim udaipur/i.test(name)) return "IIM Udaipur";
+  if (/^iim lucknow/i.test(name)) return "IIM Lucknow";
   if (/edgewood/i.test(name)) return "Edgewood University";
   if (/esgci/i.test(name)) return "ESGCI, Paris";
   if (/rushford/i.test(name)) return "Rushford Business School";
   if (/golden gate|ggu/i.test(name)) return "Golden Gate University";
   if (/ssbm/i.test(name)) return "SSBM Geneva";
-  if (/liverpool/i.test(name)) return "Liverpool Business School";
-  if (/paris school/i.test(name)) return "Paris School of Business";
   if (/iit roorkee/i.test(name)) return "IIT Roorkee";
   if (/iit delhi/i.test(name)) return "IIT Delhi";
   if (/iit madras/i.test(name)) return "IIT Madras";
   if (/iim kozhikode/i.test(name)) return "IIM Kozhikode";
   if (/iim bangalore|iimb/i.test(name)) return "IIM Bangalore";
-  if (/iim udaipur/i.test(name)) return "IIM Udaipur";
-  if (/iim lucknow/i.test(name)) return "IIM Lucknow";
   if (/iim nagpur/i.test(name)) return "IIM Nagpur";
   if (/iim indore/i.test(name)) return "IIM Indore";
   if (/iiit/i.test(name)) return "IIIT Bangalore";
   if (/xlri/i.test(name)) return "XLRI Jamshedpur";
+  if (/o\.p\. jindal|jindal/i.test(name)) return "O.P. Jindal Global University";
   return name;
 }
 
@@ -75,6 +76,7 @@ const UNI_LOGO_FILENAME_MAP = {
   "IIM Indore": "IIM Indore.png",
   "IIIT Bangalore": "IIIT Bangalore.png",
   "XLRI Jamshedpur": "XLRI.png",
+  "O.P. Jindal Global University": "OP Jindal.png",
 };
 
 // 📌 Unique Master Subcourses Catalog
@@ -249,9 +251,10 @@ const officialSheet76 = [
   { mainCourse: "Advanced Certificate in Applied Artificial Intelligence & Deep Learning", typeGroup: "IIT", uniName: "IIT Madras (IITM Pravartak)", degreeLevel: "Certification", subTitle: "Advanced Certificate in Applied Artificial Intelligence & Deep Learning", topic: "Machine Learning", feeAmount: 194700, feeTitle: "₹1,94,700", durationStr: "7 months", months: 7, provider: "TimesPro" },
 
   { mainCourse: "Certificate Programme in Strategic AI for Business Professionals", typeGroup: "IIM", uniName: "IIM Kozhikode", degreeLevel: "Certification", subTitle: "Certificate Programme in Strategic AI for Business Professionals", topic: "AI Courses", feeAmount: 199000, feeTitle: "₹1,99,000", durationStr: "6 months", months: 6, provider: "upGrad" },
+  { mainCourse: "Professional Certificate Programme in HR Management & Analytics", typeGroup: "IIM", uniName: "IIM Kozhikode", degreeLevel: "Certification", subTitle: "Professional Certificate Programme in HR Management & Analytics", topic: "HR", feeAmount: 155000, feeTitle: "₹1,55,000", durationStr: "6 months", months: 6, provider: "upGrad" },
   { mainCourse: "Young Leaders Programme in General Management", typeGroup: "IIM", uniName: "IIM Bangalore (IIMBx)", degreeLevel: "Certification", subTitle: "Young Leaders Programme in General Management", topic: "Management", feeAmount: 292640, feeTitle: "₹2,92,640", durationStr: "11 months", months: 11, provider: "upGrad" },
-  { mainCourse: "MBA", typeGroup: "IIM", uniName: "IIM Udaipur (via Liverpool MBA pathway)", degreeLevel: "Master", subTitle: "MBA General Management", topic: "Management", feeAmount: 510000, feeTitle: "₹5,10,000", durationStr: "18 months", months: 18, provider: "upGrad" },
-  { mainCourse: "MBA", typeGroup: "IIM", uniName: "IIM Lucknow (via Paris School of Business MBA pathway)", degreeLevel: "Master", subTitle: "MBA General Management", topic: "Management", feeAmount: 510000, feeTitle: "₹5,10,000", durationStr: "18 months", months: 18, provider: "upGrad" },
+  { mainCourse: "MBA", typeGroup: "IIM", uniName: "IIM Udaipur (via Liverpool MBA pathway)", degreeLevel: "Master", subTitle: "MBA", topic: "Management", feeAmount: 510000, feeTitle: "₹5,10,000", durationStr: "18 months", months: 18, provider: "upGrad" },
+  { mainCourse: "MBA", typeGroup: "IIM", uniName: "IIM Lucknow (via Paris School of Business MBA pathway)", degreeLevel: "Master", subTitle: "MBA", topic: "Management", feeAmount: 510000, feeTitle: "₹5,10,000", durationStr: "18 months", months: 18, provider: "upGrad" },
   { mainCourse: "Post Graduate Certificate Programme in Advanced HR Analytics", typeGroup: "IIM", uniName: "IIM Nagpur", degreeLevel: "Certification", subTitle: "Post Graduate Certificate Programme in Advanced HR Analytics", topic: "HR", feeAmount: 160000, feeTitle: "₹1,60,000", durationStr: "7 months", months: 7, provider: "TimesPro" },
   { mainCourse: "Executive Programme in Sales and Marketing (EPSM)", typeGroup: "IIM", uniName: "IIM Indore", degreeLevel: "Certification", subTitle: "Executive Programme in Sales and Marketing (EPSM)", topic: "Management", feeAmount: 200000, feeTitle: "₹2,00,000", durationStr: "12 months", months: 12, provider: "TimesPro" },
 
@@ -261,10 +264,11 @@ const officialSheet76 = [
   { mainCourse: "Executive Post Graduate Programme in Applied AI and Agentic AI", typeGroup: "Other", uniName: "IIIT Bangalore", degreeLevel: "Certification", subTitle: "Executive Post Graduate Programme in Applied AI and Agentic AI", topic: "AI Courses", feeAmount: 140000, feeTitle: "₹1,40,000", durationStr: "7 months", months: 7, provider: "upGrad" },
   { mainCourse: "Executive Diploma in Machine Learning & Artificial Intelligence", typeGroup: "Other", uniName: "IIIT Bangalore", degreeLevel: "Diploma", subTitle: "Executive Diploma in Machine Learning & Artificial Intelligence", topic: "Machine Learning", feeAmount: 310000, feeTitle: "₹3,10,000", durationStr: "12 months", months: 12, provider: "upGrad" },
   { mainCourse: "Chief Technology Officer & AI Leadership Programme", typeGroup: "Other", uniName: "IIIT Bangalore (with IIM Udaipur)", degreeLevel: "Certification", subTitle: "Chief Technology Officer & AI Leadership Programme", topic: "Leadership", feeAmount: 365000, feeTitle: "₹3,65,000", durationStr: "6 months", months: 6, provider: "upGrad" },
+  { mainCourse: "Chief Data & AI Officer Program", typeGroup: "Other", uniName: "IIIT Bangalore (with IIM Udaipur)", degreeLevel: "Certification", subTitle: "Chief Data & AI Officer Program", topic: "AI Courses", feeAmount: 299000, feeTitle: "₹2,99,000", durationStr: "6 months", months: 6, provider: "upGrad" },
   { mainCourse: "Master of Science in Machine Learning & Artificial Intelligence", typeGroup: "Other", uniName: "IIIT Bangalore with LJMU", degreeLevel: "Master", subTitle: "Master of Science in Machine Learning & Artificial Intelligence", topic: "Machine Learning", feeAmount: 535000, feeTitle: "₹5,35,000", durationStr: "18 months", months: 18, provider: "upGrad" },
   { mainCourse: "Master of Science in Data Science", typeGroup: "Other", uniName: "IIIT Bangalore with LJMU", degreeLevel: "Master", subTitle: "Master of Science in Data Science", topic: "Data Science", feeAmount: 485000, feeTitle: "₹4,85,000", durationStr: "18 months", months: 18, provider: "upGrad" },
   { mainCourse: "Executive Development Programme in Human Resource Management", typeGroup: "Other", uniName: "XLRI Jamshedpur (with SHRM)", degreeLevel: "Certification", subTitle: "Executive Development Programme in Human Resource Management", topic: "HR", feeAmount: 180000, feeTitle: "₹1,80,000", durationStr: "6-7 months", months: 6, provider: "TimesPro" },
-  
+
   // ── O.P. Jindal Global University ─────────────────────────────────────────
   { mainCourse: "B. Com", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Bachelor", subTitle: "International Accounting & Finance", topic: "Finance", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "3 years", months: 36, provider: "OPJ" },
   { mainCourse: "B.Sc.", typeGroup: "Other", uniName: "O.P. Jindal Global University", degreeLevel: "Bachelor", subTitle: "Finance & Entrepreneurship", topic: "Finance", feeAmount: 275000, feeTitle: "₹2,75,000", durationStr: "3 years", months: 36, provider: "OPJ" },
@@ -318,10 +322,10 @@ async function seedExactDataSheet76() {
     if (masterCat) {
       let bachelorCat = await Category.findOne({ name: { $regex: /^bachelor/i }, removed: false });
       const targetOrder = (masterCat.order || 0) + 1;
-      
+
       if (!bachelorCat) {
         console.log("   ➡️ Creating Bachelor category...");
-        
+
         // Push other categories down to make space
         await Category.updateMany(
           { order: { $gte: targetOrder }, removed: false },
@@ -342,35 +346,36 @@ async function seedExactDataSheet76() {
         });
       } else {
         console.log("   ➡️ Updating Bachelor category icon and order...");
-        
+
         // If current order isn't correct, shift others and update
         if (bachelorCat.order !== targetOrder) {
-           await Category.updateMany(
-             { order: { $gte: targetOrder }, _id: { $ne: bachelorCat._id }, removed: false },
-             { $inc: { order: 1 } }
-           );
+          await Category.updateMany(
+            { order: { $gte: targetOrder }, _id: { $ne: bachelorCat._id }, removed: false },
+            { $inc: { order: 1 } }
+          );
         }
 
         await Category.updateOne(
           { _id: bachelorCat._id },
-          { $set: { 
-              icon: masterCat.icon, 
+          {
+            $set: {
+              icon: masterCat.icon,
               image: masterCat.image,
               logo: masterCat.logo,
               logoSrc: masterCat.logoSrc,
               imageSrc: masterCat.imageSrc,
               order: targetOrder
-            } 
+            }
           }
         );
       }
       bachelorCatId = bachelorCat._id;
     }
 
-    // 2.6️⃣ Set Bachelor as parent for Finance and AI Courses
+    // 2.6️⃣ Set Bachelor as parent for Finance, AI Courses, Law, Science, Healthcare, Leadership, Management, Entrepreneurship
     if (bachelorCatId) {
-      console.log("💎 Setting Bachelor as parent for Finance and AI Courses...");
-      const targetSubcats = ["Finance", "AI Courses"];
+      console.log("💎 Setting Bachelor as parent for subcategories...");
+      const targetSubcats = ["Finance", "AI Courses", "Law", "Science", "Healthcare", "Leadership", "Management", "Entrepreneurship"];
       for (const catName of targetSubcats) {
         const cat = await Category.findOne({ name: { $regex: new RegExp(`^${catName}$`, "i") }, removed: false });
         if (cat) {
@@ -479,7 +484,7 @@ async function seedExactDataSheet76() {
             const mediaDoc = allMediaDocs.find((m) => {
               const mName = (m.name || "").toLowerCase();
               const mAlt = (m.alt || "").toLowerCase();
-              return mName === lowerFile || mAlt === baseName || mName.startsWith(lowerFile);
+              return mName === lowerFile || mAlt === baseName || mName.startsWith(lowerFile) || mName.includes(baseName);
             });
             if (mediaDoc) logoMediaId = mediaDoc._id;
           }
@@ -491,6 +496,21 @@ async function seedExactDataSheet76() {
             enabled: true,
             removed: false,
           });
+        } else if (!uniDoc.logoSrc) {
+          const logoFileName = UNI_LOGO_FILENAME_MAP[cleanUniName];
+          if (logoFileName) {
+            const lowerFile = logoFileName.toLowerCase();
+            const baseName = lowerFile.replace(".png", "");
+            const mediaDoc = allMediaDocs.find((m) => {
+              const mName = (m.name || "").toLowerCase();
+              const mAlt = (m.alt || "").toLowerCase();
+              return mName === lowerFile || mAlt === baseName || mName.startsWith(lowerFile) || mName.includes(baseName);
+            });
+            if (mediaDoc) {
+              uniDoc.logoSrc = mediaDoc._id;
+              await uniDoc.save();
+            }
+          }
         }
 
         const subcourseItems = [];
@@ -513,10 +533,25 @@ async function seedExactDataSheet76() {
             }
           }
 
-          // Add typeGroup category if present (e.g. IIT, IIM)
+          // Add typeGroup category if present (e.g. IIT, IIM, Global Universities, University)
           const typeGroupCatId = mainDegreeMap.get(row.typeGroup.toLowerCase());
           if (typeGroupCatId) {
             topicCatIds.add(String(typeGroupCatId));
+          } else if (row.typeGroup.toLowerCase() === "other") {
+            const globalCatId = mainDegreeMap.get("global universities");
+            const uniCatId = mainDegreeMap.get("university");
+            if (globalCatId) topicCatIds.add(String(globalCatId));
+            if (uniCatId) topicCatIds.add(String(uniCatId));
+          }
+
+          // If row uniName references dual pathway or XLRI / IIIT, ensure Global Universities & University categories are attached
+          if (/liverpool/i.test(row.uniName) || /paris school/i.test(row.uniName) || /iim udaipur/i.test(row.uniName) || /iim lucknow/i.test(row.uniName) || /xlri/i.test(row.uniName) || /iiit/i.test(row.uniName)) {
+            const iimCatId = mainDegreeMap.get("iim");
+            const globalCatId = mainDegreeMap.get("global universities");
+            const uniCatId = mainDegreeMap.get("university");
+            if (iimCatId && (/iim/i.test(row.uniName) || /liverpool/i.test(row.uniName) || /paris school/i.test(row.uniName))) topicCatIds.add(String(iimCatId));
+            if (globalCatId) topicCatIds.add(String(globalCatId));
+            if (uniCatId) topicCatIds.add(String(uniCatId));
           }
 
           // Find or create Fee
@@ -557,7 +592,7 @@ async function seedExactDataSheet76() {
 
           const domainName = row.topic || "Management";
 
-          const keyHighlightsData = [
+          let keyHighlightsData = [
             `Learn from ${cleanUniName}'s industry-focused curriculum`,
             "Live online sessions with experienced faculty",
             "Real-world case studies and practical assignments",
@@ -568,7 +603,7 @@ async function seedExactDataSheet76() {
             "Career-focused learning approach",
           ];
 
-          const whoCanApplyData = [
+          let whoCanApplyData = [
             "Graduates from a recognized university",
             `${domainName} Professionals & Executives`,
             "Recruiters & Talent Acquisition Specialists",
@@ -577,7 +612,7 @@ async function seedExactDataSheet76() {
             `Entrepreneurs interested in ${domainName}`,
           ];
 
-          const admissionProcessData = [
+          let admissionProcessData = [
             "Submit Your Application",
             "Connect with a Programme Advisor",
             "Eligibility Verification",
@@ -585,7 +620,129 @@ async function seedExactDataSheet76() {
             "Begin Your Learning Journey",
           ];
 
-          const overviewContent = `The ${row.subTitle} is designed for professionals and aspiring leaders who want to combine ${domainName} expertise with data-driven decision-making. The programme equips learners with practical knowledge of strategic management, workforce planning, talent management, and business strategy through live classes, real-world case studies, and hands-on learning. Whether you're looking to advance in your career or transition into leadership roles, this programme helps you build industry-relevant skills that organizations value.`;
+          let overviewContent = `The ${row.subTitle} is designed for professionals and aspiring leaders who want to combine ${domainName} expertise with data-driven decision-making. The programme equips learners with practical knowledge of strategic management, workforce planning, talent management, and business strategy through live classes, real-world case studies, and hands-on learning. Whether you're looking to advance in your career or transition into leadership roles, this programme helps you build industry-relevant skills that organizations value.`;
+          let courseModules = [];
+
+          if (/Professional Certificate Programme in HR Management & Analytics/i.test(row.subTitle)) {
+            overviewContent = "Transform your HR career with the IIM Kozhikode HR Analytics Course, designed to help professionals master people analytics, workforce planning, and strategic HR decision-making. Learn through live online sessions, industry case studies, and practical projects while earning a prestigious certificate from IIM Kozhikode. The programme equips learners with practical knowledge of HR analytics, workforce planning, talent management, and business strategy through live classes, real-world case studies, and hands-on learning. Whether you are looking to advance in HR or transition into analytics-focused roles, this programme helps you build industry-relevant skills that organizations value.";
+            
+            keyHighlightsData = [
+              "Learn from IIM Kozhikode's industry-focused curriculum",
+              "Live online sessions with experienced faculty",
+              "Real-world HR case studies and practical assignments",
+              "Hands-on capstone project",
+              "Flexible learning for working professionals",
+              "Prestigious IIM Kozhikode certificate",
+              "Practical HR analytics and people analytics skills",
+              "Career-focused learning approach",
+              "EMI Options Available",
+              "Expert Faculty",
+              "Industry-Relevant Curriculum"
+            ];
+
+            whoCanApplyData = [
+              "Graduates from a recognized university",
+              "HR Professionals",
+              "Recruiters & Talent Acquisition Specialists",
+              "Managers & Team Leaders",
+              "Business Professionals",
+              "Career Switchers",
+              "Entrepreneurs interested in HR management"
+            ];
+
+            courseModules = [
+              { title: "Module 1 – HR Management Fundamentals", name: "Module 1 – HR Management Fundamentals" },
+              { title: "Module 2 – Introduction to HR Analytics", name: "Module 2 – Introduction to HR Analytics" },
+              { title: "Module 3 – Workforce Planning & Talent Analytics", name: "Module 3 – Workforce Planning & Talent Analytics" },
+              { title: "Module 4 – Performance & Compensation Analytics", name: "Module 4 – Performance & Compensation Analytics" },
+              { title: "Module 5 – Employee Engagement & Retention", name: "Module 5 – Employee Engagement & Retention" },
+              { title: "Module 6 – HR Dashboards & Business Insights", name: "Module 6 – HR Dashboards & Business Insights" },
+              { title: "Module 7 – Capstone Project", name: "Module 7 – Capstone Project" }
+            ];
+          }
+
+          let skillsSec = {
+            title: "Skills You'll Learn & Curriculum",
+            description: "The curriculum is carefully designed to help learners understand modern practices while building analytical capabilities.",
+            skillsGain: [
+              `${domainName} Analytics`, "People Analytics", "Workforce Planning", "HR Metrics & KPIs",
+              "Talent Acquisition Analytics", "Employee Performance Analytics", "Strategic Management",
+              "Dashboards & Insights", "Business Decision-Making", "Leadership & Organizational Effectiveness"
+            ],
+            curriculumOverview: courseModules.map((m) => m.title)
+          };
+
+          let learningExp = {
+            title: "An Interactive & Flexible Learning Experience",
+            description: "Learn from anywhere without interrupting your professional commitments. The programme combines live faculty sessions with recorded lectures, industry projects, and collaborative learning.",
+            learningFeatures: [
+              "Live Online Interactive Classes",
+              "Recorded Sessions for Revision",
+              "Industry Case Studies",
+              "Practical Assignments",
+              "Capstone Project",
+              "Peer Learning Opportunities",
+              "Faculty Guidance",
+              "Dedicated Student Support",
+              "Flexible Weekend Learning"
+            ]
+          };
+
+          let instSec = {
+            title: `Learn from One of India's Premier Management Institutes`,
+            description: `${cleanUniName} is recognized for academic excellence, innovative management education, and industry-oriented programmes.`,
+            certificateTitle: `Earn a Prestigious Certificate from ${cleanUniName}`,
+            certificateDescription: `Upon successful completion, participants receive a Professional Certificate from ${cleanUniName}, adding credibility to their professional profile.`,
+            certificateImage: allMediaDocs[0]?._id || null,
+            whyItMatters: [
+              `Certificate from ${cleanUniName}`,
+              "Strengthens Your Resume",
+              "Showcase on LinkedIn",
+              "Recognized by Employers",
+              "Demonstrates Continuous Professional Development"
+            ]
+          };
+
+          let careerSec = {
+            title: "Advance Your Career with In-Demand Skills",
+            description: "Organizations are increasingly seeking professionals who can use data to improve performance and business outcomes.",
+            careerOpportunities: [
+              `${domainName} Analyst`, "Specialist Roles", "Business Partner",
+              "Managerial Roles", "Workforce Planning Analyst",
+              "Operations Manager", "Strategic Lead"
+            ],
+            industriesHiring: [
+              "Information Technology", "Consulting", "BFSI", "Healthcare",
+              "Manufacturing", "Retail", "E-commerce", "Startups"
+            ]
+          };
+
+          let feeSec = {
+            title: "Flexible Fee & Payment Options",
+            description: "Invest in your professional growth with flexible payment plans that make quality education more accessible.",
+            financialSupport: [
+              "Affordable EMI Options",
+              "Flexible Payment Plans",
+              "Scholarship Support (If Applicable)",
+              "Corporate Sponsorship Assistance",
+              "Dedicated Admission Guidance"
+            ],
+            footerNote: "Need help with fees? Speak with our admission counsellors for the latest fee structure, scholarships, and EMI options."
+          };
+
+          let faqSec = {
+            title: "Frequently Asked Questions",
+            faqs: [
+              { question: `Who is eligible for this programme?`, answer: `Graduates from a recognized university and working professionals looking to build expertise in ${domainName}.` },
+              { question: `Is the course fully online?`, answer: `Yes, the programme features live online interactive sessions along with recorded sessions for revision.` },
+              { question: `Will I receive a certificate from ${cleanUniName}?`, answer: `Yes, upon successful completion, participants receive a prestigious certificate from ${cleanUniName}.` },
+              { question: `What is the duration of the programme?`, answer: `The duration of the programme is ${row.durationStr || '6 months'}.` },
+              { question: `Are live classes recorded?`, answer: `Yes, all live sessions are recorded and made available for revision throughout the course duration.` },
+              { question: `Is EMI available?`, answer: `Yes, flexible EMI options and payment plans are available to assist learners.` },
+              { question: `How do I apply?`, answer: `Click 'Get Counseling' or 'Apply Now' to connect with a programme advisor and complete your application.` },
+              { question: `Will I receive career guidance?`, answer: `Yes, dedicated academic counsellors and student support guide you at every step of your career journey.` }
+            ]
+          };
 
           subcourseItems.push({
             subcourse: masterSubcourseId,
@@ -597,6 +754,13 @@ async function seedExactDataSheet76() {
             keyHighlights: keyHighlightsData,
             whoCanApply: whoCanApplyData,
             admissionProcess: admissionProcessData,
+            modules: courseModules,
+            skillsSection: skillsSec,
+            learningExperience: learningExp,
+            instituteSection: instSec,
+            careerSection: careerSec,
+            feeSection: feeSec,
+            faqSection: faqSec,
             fee: feeDoc._id,
             duration: durDoc._id,
             enabled: true,
