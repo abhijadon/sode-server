@@ -78,6 +78,10 @@ const populateMap = {
       ],
     },
     {
+      path: "universityOfferings.workspace",
+      select: "name description",
+    },
+    {
       path: "universityOfferings.fee",
       select: "title amount currency slug",
     },
@@ -90,8 +94,28 @@ const populateMap = {
       select: "title slug",
     },
     {
-      path: "universityOfferings.subcourse",
+      path: "universityOfferings.category",
+      select: "name slug type",
+    },
+    {
+      path: "universityOfferings.subcourses.subcourse",
       select: "title name slug",
+    },
+    {
+      path: "universityOfferings.subcourses.fee",
+      select: "title amount currency slug",
+    },
+    {
+      path: "universityOfferings.subcourses.duration",
+      select: "title slug months",
+    },
+    {
+      path: "universityOfferings.subcourses.eligibility",
+      select: "title slug",
+    },
+    {
+      path: "universityOfferings.subcourses.category",
+      select: "name slug type",
     },
     {
       path: "image",
@@ -99,6 +123,10 @@ const populateMap = {
     },
     {
       path: "logo",
+      select: "url alt name",
+    },
+    {
+      path: "brochureUrl",
       select: "url alt name",
     },
   ],
