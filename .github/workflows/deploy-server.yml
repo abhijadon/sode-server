@@ -46,6 +46,13 @@ jobs:
           script: |
             set -e # Exit script immediately if any command returns a non-zero exit status
 
+            # Export PATH for non-interactive SSH shell environment (bun, node, npm, pm2)
+            export BUN_INSTALL="$HOME/.bun"
+            export PATH="$BUN_INSTALL/bin:$HOME/.nvm/versions/node/$(ls $HOME/.nvm/versions/node 2>/dev/null | tail -n 1)/bin:$PATH:/usr/local/bin:/usr/bin:/bin"
+            if [ -s "$HOME/.nvm/nvm.sh" ]; then
+              . "$HOME/.nvm/nvm.sh"
+            fi
+
             echo "🚀 Starting Linode Deployment for existing sode-server..."
             
             # 1. Resolve target application directory on Linode (/home/sode-server)
