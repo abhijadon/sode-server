@@ -39,9 +39,9 @@ jobs:
       - name: 🔑 SSH Deploy to Linode Instance
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.LINODE_HOST }}
-          username: ${{ secrets.LINODE_USER }}
-          password: ${{ secrets.LINODE_PASSWORD }}
+          host: ${{ secrets.LINODE_HOST || '172.105.37.57' }}
+          username: ${{ secrets.LINODE_USER || 'root' }}
+          password: ${{ secrets.LINODE_PASSWORD || 'SODE@21345#' }}
           port: ${{ secrets.LINODE_PORT || 22 }}
           script: |
             set -e # Exit script immediately if any command returns a non-zero exit status
