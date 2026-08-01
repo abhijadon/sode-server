@@ -62,9 +62,11 @@ jobs:
             
             echo "📁 Deploying in directory: $(pwd)"
 
-            # 2. Pull latest code from Git
-            echo "📥 Pulling latest changes from GitHub..."
-            git pull origin main || git pull origin master
+            # 2. Pull latest code cleanly from Git
+            echo "📥 Resetting local changes and pulling latest code from GitHub..."
+            git reset --hard HEAD
+            git checkout main
+            git pull origin main
 
             # 3. Enter server subfolder if repository contains subfolder structure
             if [ -d "./server" ]; then
