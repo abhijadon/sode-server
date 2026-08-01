@@ -25,6 +25,9 @@ jobs:
           bun install --frozen-lockfile || bun install
 
       - name: 🧪 Verify Server App Initialization
+        env:
+          SKIP_DB_CONNECT: "true"
+          CI: "true"
         run: |
           node -e 'const buildApp = require("./src/app"); (async () => { const app = await buildApp({ logger: false }); await app.ready(); await app.close(); console.log("✅ CI Build Verification Passed!"); process.exit(0); })();'
 

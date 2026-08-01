@@ -16,6 +16,14 @@ async function connectDB(options = {}) {
     logger,
   } = options;
   if (!uri) {
+    if (process.env.CI || process.env.SKIP_DB_CONNECT === "true") {
+      if (logger) {
+        logger.warn("⚠️ MONGODB_URI missing in CI environment; skipping DB connection check.");
+      } else {
+        console.warn("⚠️ MONGODB_URI missing in CI environment; skipping DB connection check.");
+      }
+      return mongoose;
+    }
     throw new Error("❌ MONGODB_URI is missing in environment variables");
   }
 
