@@ -3,53 +3,68 @@
 const Fastify = require("fastify");
 const cors = require("@fastify/cors");
 const fastifyCookie = require("@fastify/cookie");
+const fastifyMultipart = require("@fastify/multipart");
 const router = require("./router");
+const plugins = require("./plugins");
 
-const app = Fastify({
-  logger: false,
-});
+/**
+ * Fastify Application Factory Plugin Builder
+ * Creates and configures the complete Fastify Application instance with all plugins & routes registered in order.
+ * @param {object} opts - Fastify initialization options
+ * @returns {Promise<import("fastify").FastifyInstance>}
+ */
+async function buildApp(opts = {}) {
+  const app = Fastify({
+    logger: opts.logger !== undefined ? opts.logger : { level: "info" },
+    ...opts,
+  });
 
-// 1. CORS प्लगइन रजिस्ट्रेशन
-app.register(cors, {
-  origin: true,
-  credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-  allowedHeaders: [
-    "Origin",
-    "X-Requested-With",
-    "Content-Type",
-    "Accept",
-    "Authorization",
-    "Cookie",
-    "Set-Cookie",
-  ],
-  exposedHeaders: ["Set-Cookie"],
-});
+  // 1. CORS Plugin Registration
+  await app.register(cors, {
+    origin: true,
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: [
+      "Origin",
+      "X-Requested-With",
+      "Content-Type",
+      "Accept",
+      "Authorization",
+      "Cookie",
+      "Set-Cookie",
+    ],
+    exposedHeaders: ["Set-Cookie"],
+  });
 
-// 2. Cookie प्लगइन रजिस्ट्रेशन (राउट्स और मिडलवेयर से पहले होना ज़रूरी है)
-app.register(fastifyCookie, {
-  secret: process.env.COOKIE_SECRET || "my-cookie-fallback-secret",
-  parseOptions: {},
-});
+  // 2. Cookie Plugin Registration
+  await app.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET || "my-cookie-fallback-secret",
+    parseOptions: {},
+  });
 
-// 2.5 Multipart File Upload प्लगइन रजिस्ट्रेशन
-app.register(require("@fastify/multipart"), {
-  limits: {
-    fileSize: 100 * 1024 * 1024, // 100 MB max file size
-  },
-  attachFieldsToBody: false,
-});
+  // 3. Multipart File Upload Plugin Registration
+  await app.register(fastifyMultipart, {
+    limits: {
+      fileSize: 100 * 1024 * 1024, // 100 MB max file size
+    },
+    attachFieldsToBody: false,
+  });
 
-// 3. डायनेमिक राउट्स रजिस्ट्रेशन
-// (अब आप अपनेauthenticate मिडलवेयर को सीधे 'router' फ़ाइल के अंदर इम्पोर्ट करके राउट्स पर लगा सकते हैं)
-app.register(router, { prefix: "/api" });
+  // 4. Infrastructure & Custom Fastify Plugins (Mongoose DB, Redis Cache, Auth, Response Helpers)
+  await app.register(plugins);
 
-// 4. हेल्थ चेक एंडपॉइंट
-app.get("/api/health/data", async () => {
-  return {
-    success: true,
-    message: "Server is running perfectly with Cookie support",
-  };
-});
+  // 5. Dynamic API Routes (/api)
+  await app.register(router, { prefix: "/api" });
 
-module.exports = app;
+  // 6. Health Check Endpoint
+  app.get("/api/health/data", async () => {
+    return {
+      success: true,
+      message: "Server is running perfectly with Fastify Plugin support",
+    };
+  });
+
+  return app;
+}
+
+module.exports = buildApp;

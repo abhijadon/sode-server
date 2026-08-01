@@ -6,13 +6,15 @@ const mongoose = require("mongoose");
  * ✅ MongoDB Connection Manager
  * - सुनिश्चित करता है कि सर्वर स्टार्ट होने से पहले DB कनेक्ट हो।
  */
-async function connectDB({
-  uri = process.env.MONGODB_URI, // डिफ़ॉल्ट रूप से env से उठाएगा
-  maxPoolSize = 50,
-  minPoolSize = 5,
-  socketTimeoutMS = 45000,
-  serverSelectionTimeoutMS = 5000,
-} = {}) {
+async function connectDB(options = {}) {
+  const {
+    uri = process.env.MONGODB_URI,
+    maxPoolSize = 50,
+    minPoolSize = 5,
+    socketTimeoutMS = 45000,
+    serverSelectionTimeoutMS = 5000,
+    logger,
+  } = options;
   if (!uri) {
     throw new Error("❌ MONGODB_URI is missing in environment variables");
   }
@@ -23,9 +25,13 @@ async function connectDB({
   }
 
   try {
-    // कनेक्शन इवेंट्स की ट्रैकिंग (लॉगिंग के लिए)
+    // Connection event listeners
     mongoose.connection.on("connected", () => {
-      console.log("🍃 MongoDB connected successfully.");
+      if (logger) {
+        logger.info("MongoDB Connected Successfully via Mongoose!");
+      } else {
+        console.log("MongoDB Connected Successfully via Mongoose!");
+      }
     });
 
     mongoose.connection.on("error", (err) => {

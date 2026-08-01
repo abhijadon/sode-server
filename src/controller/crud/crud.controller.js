@@ -401,11 +401,13 @@ function pagination(Model, populateFields = []) {
       const totalPages = Math.ceil(totalCount / sanitizedItems);
       const apiEnd = process.hrtime.bigint();
 
-      console.log(
-        `🚀 [CRUD PAGINATION] ${modelName} list fetched in ${(
-          Number(apiEnd - apiStart) / 1e6
-        ).toFixed(2)} ms`,
-      );
+      if (request.log && typeof request.log.info === "function") {
+        request.log.info(
+          `[CRUD PAGINATION] ${modelName} list fetched in ${(
+            Number(apiEnd - apiStart) / 1e6
+          ).toFixed(2)} ms`
+        );
+      }
 
       return reply.code(200).send({
         success: true,

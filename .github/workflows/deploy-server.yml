@@ -1,0 +1,85 @@
+name: 🚀 Deploy SODE Fastify Server to Linode
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  workflow_dispatch:
+
+jobs:
+  build-and-test:
+    name: 🧪 Validate Server Build & Dependencies
+    runs-on: ubuntu-latest
+    steps:
+      - name: 📥 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: ⚡ Setup Bun Environment
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: 📦 Install Server Dependencies
+        run: |
+          bun install --frozen-lockfile || bun install
+
+      - name: 🧪 Verify Server App Initialization
+        run: |
+          node -e 'const buildApp = require("./src/app"); (async () => { const app = await buildApp({ logger: false }); await app.ready(); await app.close(); console.log("✅ CI Build Verification Passed!"); process.exit(0); })();'
+
+  deploy-to-linode:
+    name: 🚀 Deploy to Linode Server
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔑 SSH Deploy to Linode Instance
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.LINODE_HOST }}
+          username: ${{ secrets.LINODE_USER }}
+          password: ${{ secrets.LINODE_PASSWORD }}
+          port: ${{ secrets.LINODE_PORT || 22 }}
+          script: |
+            set -e # Exit script immediately if any command returns a non-zero exit status
+
+            echo "🚀 Starting Linode Deployment for existing sode-server..."
+            
+            # 1. Resolve target application directory on Linode (/home/sode-server)
+            TARGET_DIR="${{ secrets.LINODE_APP_DIR || '/home/sode-server' }}"
+            if [ -d "$TARGET_DIR" ]; then
+              cd "$TARGET_DIR"
+            elif [ -d "/home/sode-server" ]; then
+              cd "/home/sode-server"
+              TARGET_DIR="/home/sode-server"
+            else
+              echo "⚠️ Directory $TARGET_DIR not found, using current working directory"
+              TARGET_DIR="$(pwd)"
+            fi
+            
+            echo "📁 Deploying in directory: $(pwd)"
+
+            # 2. Pull latest code from Git
+            echo "📥 Pulling latest changes from GitHub..."
+            git pull origin main || git pull origin master
+
+            # 3. Enter server subfolder if repository contains subfolder structure
+            if [ -d "./server" ]; then
+              cd ./server
+            fi
+            echo "📦 Working directory for server: $(pwd)"
+
+            # 4. Install production dependencies
+            echo "📦 Installing server production dependencies..."
+            bun install --production || npm install --production
+
+            # 5. 🛡️ Safety Verification: Test Server Initialization BEFORE Restarting PM2
+            echo "🧪 Testing server startup on Linode before restart to prevent crash..."
+            node -e 'const buildApp = require("./src/app"); (async () => { try { const app = await buildApp({ logger: false }); await app.ready(); await app.close(); console.log("✅ Pre-restart test passed cleanly!"); process.exit(0); } catch(err) { console.error("❌ Pre-restart test failed:", err); process.exit(1); } })();'
+
+            # 6. ⚡ Only if verification passed, reload existing PM2 process sode-server
+            echo "⚡ Pre-restart verification succeeded! Reloading existing PM2 process: sode-server..."
+            pm2 reload sode-server || pm2 restart sode-server
+            pm2 save
+
+            echo "🎉 Linode Deployment Completed Successfully for sode-server!"

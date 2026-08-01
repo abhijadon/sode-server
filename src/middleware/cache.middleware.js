@@ -48,11 +48,15 @@ function useCache(ttlSeconds = 3600) {
           reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
           request.isCached = true;
           const duration = (performance.now() - startTime).toFixed(2);
-          console.log(`⚡ [REDIS HIT] (${duration}ms) 🚀 Served directly from Redis Cache: ${request.url}`);
+          if (request.log && typeof request.log.info === "function") {
+            request.log.info(`[REDIS HIT] (${duration}ms) Served directly from Redis Cache: ${request.url}`);
+          }
           return reply.send(cachedPayload); // Directly responds with cached object
         }
       } catch (err) {
-        console.warn(`⚠️ Cache preHandler warning for ${request.url}:`, err.message);
+        if (request.log && typeof request.log.warn === "function") {
+          request.log.warn(`Cache preHandler warning for ${request.url}: ${err.message}`);
+        }
       }
     },
 
@@ -77,7 +81,9 @@ function useCache(ttlSeconds = 3600) {
             reply.header("X-Cache", "MISS");
             reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
             const duration = request.startTime ? (performance.now() - request.startTime).toFixed(2) : "0.00";
-            console.log(`🍃 [MONGO DB] (${duration}ms) 💾 Fetched from MongoDB Database & Stored to Redis: ${request.url}`);
+            if (request.log && typeof request.log.info === "function") {
+              request.log.info(`[MONGO DB] (${duration}ms) Fetched from MongoDB Database & Stored to Redis: ${request.url}`);
+            }
           }
         } catch (err) {
           // Silent catch to prevent response failure if payload isn't JSON
