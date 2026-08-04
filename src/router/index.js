@@ -338,6 +338,21 @@ const optionsSelectMap = {
 };
 
 module.exports = async function (app, options) {
+  // 🧹 EXPLICIT MANUAL CLEAR CACHE ENDPOINTS (GET & POST)
+  const clearCacheHandler = async (request, reply) => {
+    const { clearAllCache } = require("../middleware/cache.middleware");
+    await clearAllCache();
+    return reply.send({
+      success: true,
+      message: "Redis cache cleared successfully across all endpoints.",
+    });
+  };
+
+  app.get("/clearcache", clearCacheHandler);
+  app.post("/clearcache", clearCacheHandler);
+  app.get("/cache/clear", clearCacheHandler);
+  app.post("/cache/clear", clearCacheHandler);
+
   for (const filePath of appModelsFiles) {
     const fileNameWithExtension = basename(filePath);
     const fileNameWithoutExtension = fileNameWithExtension.replace(
@@ -876,26 +891,30 @@ module.exports = async function (app, options) {
         routeConfig.preValidation = routeOpts.preValidation;
       }
 
-      // 1. Automatically attach Redis caching to ALL GET requests across the entire application
+      // 1. Attach route-level preHandler and onSend hooks (Redis caching is applied ONLY to routes specifying ...useCache(300))
       const customPreHandler = routeOpts["preHandler"];
       const customOnSend = routeOpts["onSend"];
 
-      if (routeOpts.method === "GET") {
-        const cacheHooks = useCache(300);
-        // Custom preHandlers (e.g. buildCourseFilter) MUST run before the cache
-        // preHandler so they can populate request state before any early reply.
-        routeConfig.preHandler = customPreHandler
-          ? Array.isArray(customPreHandler)
-            ? [...customPreHandler, cacheHooks.preHandler]
-            : [customPreHandler, cacheHooks.preHandler]
-          : cacheHooks.preHandler;
-        routeConfig.onSend = cacheHooks.onSend;
+      if (customOnSend) {
+        routeConfig.onSend = customOnSend;
+
+        if (customPreHandler) {
+          if (Array.isArray(customPreHandler)) {
+            const hasCachePreHandler = customPreHandler.some((fn) => fn && fn.isCachePreHandler);
+            routeConfig.preHandler = hasCachePreHandler
+              ? customPreHandler
+              : [...customPreHandler, useCache(300).preHandler];
+          } else if (customPreHandler.isCachePreHandler) {
+            routeConfig.preHandler = customPreHandler;
+          } else {
+            routeConfig.preHandler = [customPreHandler, useCache(300).preHandler];
+          }
+        } else {
+          routeConfig.preHandler = useCache(300).preHandler;
+        }
       } else {
         if (customPreHandler) {
           routeConfig.preHandler = customPreHandler;
-        }
-        if (customOnSend) {
-          routeConfig.onSend = customOnSend;
         }
       }
 
@@ -905,7 +924,7 @@ module.exports = async function (app, options) {
         routeConfig.onSend = async (request, reply, payload) => {
           if (reply.statusCode >= 200 && reply.statusCode < 300) {
             const { clearAllCache } = require("../middleware/cache.middleware");
-            clearAllCache();
+            await clearAllCache();
           }
           if (originalOnSend) {
             return originalOnSend(request, reply, payload);

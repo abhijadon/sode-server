@@ -2,8 +2,8 @@
 
 const mongoose = require("mongoose");
 const path = require("path");
-require("dotenv").config({ path: path.join(__dirname, ".env") });
-const { Course } = require("./src/model/Course");
+require("dotenv").config({ path: path.join(__dirname, "../../.env") });
+const { Course } = require("../model/Course");
 
 const MONGODB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm";
 
@@ -38,6 +38,20 @@ const EXACT_IIMK_CONTENT = {
     "Career-focused learning approach",
   ],
 
+  whoCanApply: [
+    "Working HR professionals seeking career advancement",
+    "Graduates aspiring to enter HR domain",
+    "Business managers handling people functions",
+    "Entrepreneurs managing workforce decisions",
+  ],
+
+  admissionProcess: [
+    "Fill online application form",
+    "Speak with academic counsellor",
+    "Submit documents & pay fee",
+    "Get admission confirmation",
+  ],
+
   courseSnapshotBottom: [
     { label: "Duration", value: "6 Months" },
     { label: "Mode", value: "Live Online" },
@@ -45,24 +59,6 @@ const EXACT_IIMK_CONTENT = {
     { label: "Projects", value: "Capstone Project" },
     { label: "Certificate", value: "IIM Kozhikode" },
     { label: "EMI", value: "Available" },
-  ],
-
-  whoCanApply: [
-    "Graduates from a recognized university",
-    "HR Professionals",
-    "Recruiters & Talent Acquisition Specialists",
-    "Managers & Team Leaders",
-    "Business Professionals",
-    "Career Switchers",
-    "Entrepreneurs interested in HR management",
-  ],
-
-  admissionProcess: [
-    "Submit Your Application",
-    "Connect with a Programme Advisor",
-    "Eligibility Verification",
-    "Complete Fee Payment",
-    "Begin Your Learning Journey",
   ],
 
   skillsSection: {
@@ -116,13 +112,7 @@ const EXACT_IIMK_CONTENT = {
     certificateTitle: "Earn a Prestigious Certificate",
     certificateDescription:
       "Upon successful completion, participants receive a Professional Certificate in HR Management & Analytics from IIM Kozhikode, adding credibility to their professional profile and demonstrating expertise in modern HR practices.",
-    whyItMatters: [
-      "Certificate from IIM Kozhikode",
-      "Strengthens Your Resume",
-      "Showcase on LinkedIn",
-      "Recognized by Employers",
-      "Demonstrates Continuous Professional Development",
-    ],
+    certificateImage: null,
   },
 
   careerSection: {
@@ -167,7 +157,7 @@ const EXACT_IIMK_CONTENT = {
   },
 
   faqSection: {
-    title: "Frequently Asked Questions",
+    title: "Frequently Asked Questions (FAQs)",
     faqs: [
       {
         question: "1. Who is eligible for this programme?",
@@ -213,26 +203,23 @@ const EXACT_IIMK_CONTENT = {
   },
 };
 
-async function updateIIMKCourse() {
+async function updateIIMKContent() {
   try {
+    console.log("Connecting to Database...");
     await mongoose.connect(MONGODB_URI);
-    console.log("Connected to MongoDB.");
+    console.log("Connected successfully to MongoDB.");
 
-    const course = await Course.findOne({
-      slug: "professional-certificate-programme-in-hr-management-analytics",
-    });
+    const targetSlug = "executive-development-programme-in-human-resource-management";
+    const course = await Course.findOne({ slug: targetSlug });
 
     if (!course) {
-      console.error("Course not found!");
-      return;
+      console.log(`Course with slug '${targetSlug}' not found.`);
+      process.exit(1);
     }
 
-    console.log(`Found Course: "${course.title}" (${course._id})`);
+    console.log(`Found course: ${course.title} (_id: ${course._id})`);
 
-    // Update root level description if needed
-    course.description = EXACT_IIMK_CONTENT.overviewDescription;
-
-    // Update offerings & subcourses
+    let updatedCount = 0;
     if (course.universityOfferings && course.universityOfferings.length > 0) {
       for (const offering of course.universityOfferings) {
         if (offering.subcourses && offering.subcourses.length > 0) {
@@ -240,30 +227,41 @@ async function updateIIMKCourse() {
             subcourse.overviewTitle = EXACT_IIMK_CONTENT.overviewTitle;
             subcourse.overviewDescription = EXACT_IIMK_CONTENT.overviewDescription;
             subcourse.overviewSnapshot = EXACT_IIMK_CONTENT.overviewSnapshot;
+
             subcourse.whyChooseTitle = EXACT_IIMK_CONTENT.whyChooseTitle;
             subcourse.whyChooseDescription = EXACT_IIMK_CONTENT.whyChooseDescription;
             subcourse.keyHighlights = EXACT_IIMK_CONTENT.keyHighlights;
-            subcourse.courseSnapshotBottom = EXACT_IIMK_CONTENT.courseSnapshotBottom;
+
             subcourse.whoCanApply = EXACT_IIMK_CONTENT.whoCanApply;
             subcourse.admissionProcess = EXACT_IIMK_CONTENT.admissionProcess;
+            subcourse.courseSnapshotBottom = EXACT_IIMK_CONTENT.courseSnapshotBottom;
+
             subcourse.skillsSection = EXACT_IIMK_CONTENT.skillsSection;
             subcourse.learningExperience = EXACT_IIMK_CONTENT.learningExperience;
             subcourse.instituteSection = EXACT_IIMK_CONTENT.instituteSection;
             subcourse.careerSection = EXACT_IIMK_CONTENT.careerSection;
             subcourse.feeSection = EXACT_IIMK_CONTENT.feeSection;
             subcourse.faqSection = EXACT_IIMK_CONTENT.faqSection;
+
+            updatedCount++;
           }
         }
       }
     }
 
-    await course.save();
-    console.log("Successfully updated IIM Kozhikode HR Management & Analytics Course with exact user content.");
-  } catch (err) {
-    console.error("Error updating course:", err);
-  } finally {
-    await mongoose.disconnect();
+    if (updatedCount > 0) {
+      course.markModified("universityOfferings");
+      await course.save();
+      console.log(`Successfully updated ${updatedCount} subcourses for IIM Kozhikode HR course!`);
+    } else {
+      console.log("No subcourses found under university offerings for this course.");
+    }
+
+    process.exit(0);
+  } catch (error) {
+    console.error("Error updating IIM Kozhikode HR content:", error);
+    process.exit(1);
   }
 }
 
-updateIIMKCourse();
+updateIIMKContent();

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Course } = require("./src/model/Course");
+const { Course } = require("../model/Course");
 require("dotenv").config();
 
 const DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode";

@@ -6,8 +6,8 @@ async function run() {
   try {
     require("dotenv").config({ path: path.resolve(__dirname, "../../.env") });
     await mongoose.connect(process.env.DATABASE_URL || process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode-crm");
-    const Course = require('./src/model/Course').Course;
-    const Uni = require('./src/model/University').University;
+    const Course = require('../model/Course').Course;
+    const Uni = require('../model/University').University;
     
     const opj = await Uni.findOne({ name: /Jindal/i });
     if (!opj) { console.log("OPJ not found"); return process.exit(0); }

@@ -28,69 +28,74 @@ function getNormalizedCacheKey(request) {
  * @param {number} ttlSeconds - Time-To-Live in seconds (default: 3600s / 1 hour)
  */
 function useCache(ttlSeconds = 3600) {
-  return {
-    preHandler: async (request, reply) => {
-      // Only cache GET requests
-      if (request.method !== "GET") return;
+  const cachePreHandler = async (request, reply) => {
+    // Only cache GET requests
+    if (request.method !== "GET") return;
 
-      const startTime = performance.now();
-      request.startTime = startTime;
+    const startTime = performance.now();
+    request.startTime = startTime;
 
-      // Create normalized cache key
-      const cacheKey = getNormalizedCacheKey(request);
-      request.cacheKey = cacheKey;
+    // Create normalized cache key
+    const cacheKey = getNormalizedCacheKey(request);
+    request.cacheKey = cacheKey;
 
-      try {
-        const cachedPayload = await getCache(cacheKey);
-        if (cachedPayload) {
-          reply.header("Content-Type", "application/json; charset=utf-8");
-          reply.header("X-Cache", "HIT");
-          reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
-          request.isCached = true;
-          const duration = (performance.now() - startTime).toFixed(2);
-          if (request.log && typeof request.log.info === "function") {
-            request.log.info(`[REDIS HIT] (${duration}ms) Served directly from Redis Cache: ${request.url}`);
-          }
-          return reply.send(cachedPayload); // Directly responds with cached object
+    try {
+      const cachedPayload = await getCache(cacheKey);
+      if (cachedPayload) {
+        reply.header("Content-Type", "application/json; charset=utf-8");
+        reply.header("X-Cache", "HIT");
+        reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
+        request.isCached = true;
+        const duration = (performance.now() - startTime).toFixed(2);
+        if (request.log && typeof request.log.info === "function") {
+          request.log.info(`[REDIS HIT] (${duration}ms) Served directly from Redis Cache: ${request.url}`);
         }
-      } catch (err) {
-        if (request.log && typeof request.log.warn === "function") {
-          request.log.warn(`Cache preHandler warning for ${request.url}: ${err.message}`);
-        }
+        return reply.send(cachedPayload); // Directly responds with cached object
       }
-    },
-
-    onSend: async (request, reply, payload) => {
-      // Skip if not GET, no cache key, or already served from cache
-      if (request.method !== "GET" || !request.cacheKey || request.isCached) {
-        return payload;
+    } catch (err) {
+      if (request.log && typeof request.log.warn === "function") {
+        request.log.warn(`Cache preHandler warning for ${request.url}: ${err.message}`);
       }
+    }
+  };
+  cachePreHandler.isCachePreHandler = true;
 
-      // Only cache successful 200 OK responses
-      if (reply.statusCode === 200 && payload) {
-        try {
-          let rawString = payload;
-          if (Buffer.isBuffer(payload)) {
-            rawString = payload.toString("utf-8");
-          }
-
-          if (typeof rawString === "string") {
-            // Validate payload is valid JSON before saving to Redis
-            const parsedObj = JSON.parse(rawString);
-            await setCache(request.cacheKey, parsedObj, ttlSeconds);
-            reply.header("X-Cache", "MISS");
-            reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
-            const duration = request.startTime ? (performance.now() - request.startTime).toFixed(2) : "0.00";
-            if (request.log && typeof request.log.info === "function") {
-              request.log.info(`[MONGO DB] (${duration}ms) Fetched from MongoDB Database & Stored to Redis: ${request.url}`);
-            }
-          }
-        } catch (err) {
-          // Silent catch to prevent response failure if payload isn't JSON
-        }
-      }
+  const cacheOnSend = async (request, reply, payload) => {
+    // Skip if not GET, no cache key, or already served from cache
+    if (request.method !== "GET" || !request.cacheKey || request.isCached) {
       return payload;
     }
+
+    // Only cache successful 200 OK responses
+    if (reply.statusCode === 200 && payload) {
+      try {
+        let rawString = payload;
+        if (Buffer.isBuffer(payload)) {
+          rawString = payload.toString("utf-8");
+        }
+
+        if (typeof rawString === "string") {
+          // Validate payload is valid JSON before saving to Redis
+          const parsedObj = JSON.parse(rawString);
+          await setCache(request.cacheKey, parsedObj, ttlSeconds);
+          reply.header("X-Cache", "MISS");
+          reply.header("Cache-Control", "public, max-age=300, s-maxage=600, stale-while-revalidate=60");
+          const duration = request.startTime ? (performance.now() - request.startTime).toFixed(2) : "0.00";
+          if (request.log && typeof request.log.info === "function") {
+            request.log.info(`[MONGO DB] (${duration}ms) Fetched from MongoDB Database & Stored to Redis: ${request.url}`);
+          }
+        }
+      } catch (err) {
+        // Silent catch to prevent response failure if payload isn't JSON
+      }
+    }
+    return payload;
+  };
+  cacheOnSend.isCacheOnSend = true;
+
+  return {
+    preHandler: cachePreHandler,
+    onSend: cacheOnSend,
   };
 }
 

@@ -1,6 +1,6 @@
 const mongoose = require("mongoose");
-const { Category } = require("./src/model/Category");
-const { University } = require("./src/model/University");
+const { Category } = require("../model/Category");
+const { University } = require("../model/University");
 require("dotenv").config();
 
 async function run() {

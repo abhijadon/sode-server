@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Category } = require("./src/model/Category");
+const { Category } = require("../model/Category");
 require("dotenv").config();
 
 async function restoreBrowseParent() {

@@ -1,5 +1,5 @@
 const mongoose = require("mongoose");
-const { Course } = require("./src/model/Course");
+const { Course } = require("../model/Course");
 require("dotenv").config();
 
 const DB_URI = process.env.MONGODB_URI || "mongodb://127.0.0.1:27017/sode";
@@ -152,9 +152,6 @@ async function seedData() {
       }
 
       let updated = false;
-      // We will apply this to all subcourses inside all offerings for this course,
-      // or just the first offering's first subcourse if there are many. 
-      // For safety, let's update all subcourses in this specific course.
       if (course.universityOfferings && course.universityOfferings.length > 0) {
         for (const offering of course.universityOfferings) {
           if (offering.subcourses && offering.subcourses.length > 0) {
